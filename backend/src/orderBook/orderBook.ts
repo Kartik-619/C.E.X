@@ -1,31 +1,29 @@
-import type { IOrderBook } from "../interface/I_OrderBook";
-import type { Order } from "../interface/Order";
+import type { Order,IOrderBook } from "../interface/IOrderBook";
+import type { inmemory_OrderBookStore } from "../store/orderbook-store";
 
 export class OrderBook  implements IOrderBook<Order>{
-    private list:Order[]=[];
-    constructor(){
-
+    private store:inmemory_OrderBookStore;
+    constructor(store:inmemory_OrderBookStore ){
+    this.store=store;
     }
 
     async placeOrder(order:Order): Promise<Order> {
-        this.list.push(order);
-        console.log("adding ",order)
-        return order
-    }
-    async cancelOrder(orderId:number): Promise<void> {
-        const orderToRemove = this.list.find(i => i.orderId === orderId);
-        
-        if (orderToRemove) {
-            // 8. JavaScript arrays DO NOT have a .remove() method. 
-            // Use .filter() to create a new array excluding the cancelled order.
-            this.list = this.list.filter(i => i.orderId !== orderId);
-            console.log("removing :",orderId)
+        if (order.price <= "0") {
+            throw new Error("Invalid price");
         }
-        return Promise.resolve()
+
+        console.log("[OrderBook] Processing order placement...");
+        
+       return await this.store.placeOrder(order)
+    }
+    async cancelOrder(orderId: number): Promise<void> {
+        console.log("[OrderBook] Processing order cancellation...");
+        
+        // Delegate to the storage layer
+        await this.store.cancelOrder(orderId);
     }
 
-    getOrderBook(){
-        console.log("the list is :",this.list);
-        return this.list;
+    getOrderBook(): Order[] {
+        return this.store.getOrderBook();
     }
 }

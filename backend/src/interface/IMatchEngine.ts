@@ -1,7 +1,4 @@
-// ../interface/MatchEngine.ts
-
-import type { IOrderBook } from "./I_OrderBook";
-import type { Order } from "./Order";
+import type { IOrderBook, Order } from "./IOrderBook";
 
 export interface IMatchEngine<T = Order> {
     processOrder(order: T): Promise<T>;
@@ -9,7 +6,7 @@ export interface IMatchEngine<T = Order> {
 }
 
 export abstract class AbstractEngine<T = Order> implements IMatchEngine<T> {
-    // Protected so child classes can access the orderbook instance
+    // Protected so child classes can access the orderbook instance directly
     constructor(protected orderBook: IOrderBook<T>) {}
 
     abstract processOrder(order: T): Promise<T>;

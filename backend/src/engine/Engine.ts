@@ -1,20 +1,31 @@
 // ../engine/StandardEngine.ts
 
-import { AbstractEngine } from "../interface/MatchEngine";
-import type { Order } from "../interface/Order";
+import { AbstractEngine } from "../interface/IMatchEngine";
+import  { OrderBook } from "../orderBook/orderBook";
+import type { Order } from "../interface/IOrderBook";
 
 export class StandardEngine extends AbstractEngine<Order> {
     // Executes logic when receiving a new order
-    async processOrder(order: Order): Promise<Order> {
-        console.log("Processing order in engine:", order.orderId);
+  
+    // Inject the OrderBook into the Engine
+    constructor(orderBook: OrderBook) {
         
-        // Orchestrate placing order into the orderbook
-        return await this.orderBook.placeOrder(order);
+        super(orderBook)
     }
 
-    // Delegates order cancellation to the orderbook
+    async processOrder(order: Order): Promise<Order> {
+        console.log(`[Engine] Received new ${order.type} order for ${order.entity}`);
+        
+        // Delegate to OrderBook
+        const savedOrder = await this.orderBook.placeOrder(order);
+        
+        // TODO: Future logic -> await this.findMatch(savedOrder);
+        
+        return savedOrder;
+    }
+
     async cancelOrder(orderId: number): Promise<void> {
-        console.log("Cancelling order in engine:", orderId);
+        console.log(`[Engine] Requesting cancellation for order ${orderId}`);
         await this.orderBook.cancelOrder(orderId);
     }
 }

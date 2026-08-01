@@ -4,3 +4,10 @@ export interface IOrderBook<T>{
     //findMatch for future 
 
 }
+
+export interface Order{
+    orderId:number,
+    type:'buy'|'sell',
+    price:string,
+    entity:string
+}
