@@ -1,19 +1,17 @@
-interface IMatchEngine<T>{
-    placeOrder():Promise<T>;
-    cancelOrder():Promise<void>;
+// ../interface/MatchEngine.ts
+
+import type { IOrderBook } from "./I_OrderBook";
+import type { Order } from "./Order";
+
+export interface IMatchEngine<T = Order> {
+    processOrder(order: T): Promise<T>;
+    cancelOrder(orderId: number): Promise<void>;
 }
 
-abstract class AbstractEngine<T> implements IMatchEngine<T>  {
-    constructor(  parameter:any) {
-        
-    }
+export abstract class AbstractEngine<T = Order> implements IMatchEngine<T> {
+    // Protected so child classes can access the orderbook instance
+    constructor(protected orderBook: IOrderBook<T>) {}
 
-
-
-    async placeOrder():Promise<T>{
-        throw new Error("Implement it ")
-    };
-    async cancelOrder():Promise<void>{
-        throw new Error("Implement it ")
-    };
+    abstract processOrder(order: T): Promise<T>;
+    abstract cancelOrder(orderId: number): Promise<void>;
 }
