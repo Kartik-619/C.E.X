@@ -1,4 +1,4 @@
-import type { IOrderBook, Order } from "../interface/IOrderBook";
+import type { IOrderBook, Order } from "../engine/interface/IOrderBook";
 
 export class inmemory_OrderBookStore implements IOrderBook<Order>{
     private list=new Map<number,Order>();
