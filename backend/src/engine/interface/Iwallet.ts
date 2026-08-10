@@ -2,7 +2,6 @@ import type { Balance } from "./Ibalance";
 export interface IWallet <T>{
     // Read operations
     getBalance(userId: string, asset: string): Promise<Balance>;
-    checkBalance(userId: string, asset: string, amount: number): Promise<T>;
     
     // Write operations
     lockFunds(userId: string, asset: string, amount: number): Promise<void>;
