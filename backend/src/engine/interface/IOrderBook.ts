@@ -1,5 +1,5 @@
-export interface IOrderBook<T>{
-    placeOrder(order:T):Promise<T>;
+export interface IOrderBook{
+    placeOrder(order:Order):Promise<Order>;
     cancelOrder(orderId:number):Promise<void>; 
     //findMatch for future 
 
@@ -7,7 +7,8 @@ export interface IOrderBook<T>{
 
 export interface Order{
     orderId:number,
-    type:'buy'|'sell',
-    price:string,
-    entity:string
+    side:'buy'|'sell',
+    price:number,
+    entity:string,
+    type:'LIMIT'|'MARKET'
 }

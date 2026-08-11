@@ -1,14 +1,14 @@
 import type { Order,IOrderBook } from "../interface/IOrderBook";
 import type { inmemory_OrderBookStore } from "../../store/orderbook-store";
 
-export class OrderBook  implements IOrderBook<Order>{
+export class OrderBook  implements IOrderBook{
     private store:inmemory_OrderBookStore;
     constructor(store:inmemory_OrderBookStore ){
     this.store=store;
     }
 
     async placeOrder(order:Order): Promise<Order> {
-        if (order.price <= "0") {
+        if (order.price <= 0) {
             throw new Error("Invalid price");
         }
 
