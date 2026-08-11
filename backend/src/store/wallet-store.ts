@@ -38,10 +38,10 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
         if (!currentBalance) {
             throw new Error("No enteries for this UserId")
         }
-        if (currentBalance.amount< amount) {
+        if (currentBalance.available< amount) {
             throw new Error(`Insufficient ${asset} balance for user ${userId}`);
         }
-        currentBalance.amount -= amount;
+        currentBalance.available -= amount;
         currentBalance.locked += amount;
     };
     async unlockFunds(userId: string, asset: string, amount: number): Promise<void> {
@@ -56,9 +56,11 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
         if (!currentBalance) {
             throw new Error("No enteries for this UserId")
         }
-       
+        if (currentBalance.available< amount) {
+            throw new Error(`Insufficient ${asset} balance for user ${userId}`);
+        }
         currentBalance.locked -= amount;
-        currentBalance.amount +=amount;
+        currentBalance.available +=amount;
 
     };
     // Settlement operations
@@ -78,10 +80,10 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
         }
         let currentBalance = userBalance.get(asset);
         if (!currentBalance) {
-            currentBalance = { amount: 0, locked: 0 }
+            currentBalance = { available: 0, locked: 0 }
             userBalance.set(asset, currentBalance);
         }
-        currentBalance.amount += amount;
+        currentBalance.available += amount;
     };
     // async initialize(): Promise<void>{} };
 

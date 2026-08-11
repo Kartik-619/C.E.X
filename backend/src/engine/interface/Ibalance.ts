@@ -1,5 +1,5 @@
 export interface Balance{
-    amount:number;
+    available:number;
     locked:number;
     total?: number; 
 }
