@@ -7,7 +7,7 @@ export interface IMatchEngine<T = Order> {
 
 export abstract class AbstractEngine<T = Order> implements IMatchEngine<T> {
     // Protected so child classes can access the orderbook instance directly
-    constructor(protected orderBook: IOrderBook<T>) {}
+    constructor(protected orderBook: IOrderBook) {}
 
     abstract processOrder(order: T): Promise<T>;
     abstract cancelOrder(orderId: number): Promise<void>;

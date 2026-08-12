@@ -22,6 +22,12 @@ export class OrderBook  implements IOrderBook{
         // Delegate to the storage layer
         await this.store.cancelOrder(orderId);
     }
+    getBestAsk():Order|null{
+        return this.store.getBestBid()
+    }
+    getBestSell():Order|null{
+        return this.store.getbestSell()
+    }
 
     getOrderBook(): Order[] {
         return this.store.getOrderBook();

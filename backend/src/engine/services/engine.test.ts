@@ -7,7 +7,7 @@ import type { Order } from "../interface/IOrderBook";
 // Helper to create a mock order
 const createMockOrder = (id: number, type: 'buy' | 'sell' = 'buy', price: string = '100'): Order => ({
     orderId: id,
-    type,
+    side,
     price,
     entity: 'AAPL'
 });
