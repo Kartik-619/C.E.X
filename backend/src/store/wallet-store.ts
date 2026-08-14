@@ -21,6 +21,23 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
         }
         return currentBalance;
     }
+    async checkBalance(userId:string,asset:string,amount:number):Promise<boolean>{
+        if (!userId) {
+            throw new Error("Invalid User");
+        }
+        const userB=await this.balance.get(userId)
+        if (!userB) {
+            throw new Error("User doesnt exist");
+        }
+        const currentBalance = userB?.get(asset);
+        if (!currentBalance) {
+            throw new Error("No enteries for this UserId")
+        }
+        if(currentBalance.available>=amount){
+            return true;
+        }
+       return false
+    }
 
 
 

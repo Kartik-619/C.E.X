@@ -11,6 +11,9 @@ export class Wallet implements  IWallet<Balance>{
     async getBalance(userId: string, asset: string): Promise<Balance> {
       return  this.store.getBalance(userId,asset)
     }
+    async checkBalance(userId: string, asset: string, amount: number): Promise<boolean> {
+        return this.store.checkBalance(userId,asset,amount)
+    }
     async lockFunds(userId: string, asset: string, amount: number): Promise<void> {
         this.store.lockFunds(userId,asset,amount);
     }
