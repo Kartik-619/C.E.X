@@ -12,7 +12,7 @@ export interface IOrderBook{
 
 export interface Order{
     orderId:number,
-    userId:number,
+    userId:string,
     side:'buy'|'sell',
     price:number,
     type:'LIMIT'|'MARKET',

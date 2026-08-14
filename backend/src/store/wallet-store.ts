@@ -63,8 +63,78 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
     };
     // Settlement operations
     async settleTrade(trade: ITrade): Promise<void> {
+        // Validate trade
+        if (!trade.buyerId || !trade.sellerId || !trade.symbol) {
+            throw new Error('Invalid trade data: missing buyer, seller, or symbol');
+        }
+        
+        if (trade.price <= 0 || trade.quantity <= 0) {
+            throw new Error('Invalid trade price or quantity');
+        }
 
-    };
+        const cashAmount = trade.price * trade.quantity;
+        const assetSymbol = trade.symbol.split('/')[0];
+        
+        if (!assetSymbol) {
+            throw new Error(`Invalid symbol format: ${trade.symbol}`);
+        }
+
+        // Get buyer's balances
+        let buyerBalance = this.balance.get(trade.buyerId);
+        if (!buyerBalance) {
+            buyerBalance = new Map();
+            this.balance.set(trade.buyerId, buyerBalance);
+        }
+        
+        // Get seller's balances
+        let sellerBalance = this.balance.get(trade.sellerId);
+        if (!sellerBalance) {
+            sellerBalance = new Map();
+            this.balance.set(trade.sellerId, sellerBalance);
+        }
+
+        // --- BUYER SIDE ---
+        // 1. Deduct cash from buyer
+        let buyerCash = buyerBalance.get(trade.symbol);
+        if (!buyerCash) {
+            buyerCash = { available: 0, locked: 0 };
+            buyerBalance.set(trade.symbol, buyerCash);
+        }
+        
+        if (buyerCash.available < cashAmount) {
+            throw new Error(`Insufficient funds for buyer ${trade.buyerId}. Need ${cashAmount}, have ${buyerCash.available}`);
+        }
+        buyerCash.available -= cashAmount;
+        
+        // 2. Credit asset to buyer
+        let buyerAsset = buyerBalance.get(assetSymbol);
+        if (!buyerAsset) {
+            buyerAsset = { available: 0, locked: 0 };
+            buyerBalance.set(assetSymbol, buyerAsset);
+        }
+        buyerAsset.available += trade.quantity;
+
+        // --- SELLER SIDE ---
+        // 3. Deduct asset from seller
+        let sellerAsset = sellerBalance.get(assetSymbol);
+        if (!sellerAsset) {
+            sellerAsset = { available: 0, locked: 0 };
+            sellerBalance.set(assetSymbol, sellerAsset);
+        }
+        
+        if (sellerAsset.available < trade.quantity) {
+            throw new Error(`Insufficient asset for seller ${trade.sellerId}. Need ${trade.quantity}, have ${sellerAsset.available}`);
+        }
+        sellerAsset.available -= trade.quantity;
+        
+        // 4. Credit cash to seller
+        let sellerCash = sellerBalance.get(trade.symbol);
+        if (!sellerCash) {
+            sellerCash = { available: 0, locked: 0 };
+            sellerBalance.set(trade.symbol, sellerCash);
+        }
+        sellerCash.available += cashAmount;
+    }
 
     // Administrative operations
     async deposit(userId: string, asset: string, amount: number): Promise<void> {
