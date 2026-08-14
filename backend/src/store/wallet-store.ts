@@ -1,8 +1,6 @@
 import type { Balance } from "../engine/interface/Ibalance";
 import type { IWallet } from "../engine/interface/Iwallet";
-interface Trade {
-
-}
+import type { ITrade } from "../engine/interface/ITrade";
 export class Inmemory_WalletStore implements IWallet<Balance> {
     private balance: Map<string, Map<string, Balance>>
     constructor() {
@@ -56,7 +54,7 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
         if (!currentBalance) {
             throw new Error("No enteries for this UserId")
         }
-        if (currentBalance.available< amount) {
+        if (currentBalance.locked< amount) {
             throw new Error(`Insufficient ${asset} balance for user ${userId}`);
         }
         currentBalance.locked -= amount;
@@ -64,7 +62,7 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
 
     };
     // Settlement operations
-    async settleTrade(trade: Trade): Promise<void> {
+    async settleTrade(trade: ITrade): Promise<void> {
 
     };
 

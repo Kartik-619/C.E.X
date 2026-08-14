@@ -36,7 +36,7 @@ export class inmemory_OrderBookStore implements IOrderBook{
         }
         return best;
     }
-    getbestSell():Order|null{
+    getBestAsk():Order|null{
         let best = this.asks[0] ?? null;  
         if (!best) return null;  
         for (const order of this.asks) {
@@ -50,5 +50,13 @@ export class inmemory_OrderBookStore implements IOrderBook{
     getOrderBook(): Order[] {
         // Convert Map values back to an array if you need to view/print them
         return Array.from(this.list.values());
+    }
+    async findBestMatch(order: Order): Promise<Order|null> {
+        if(order.side==='buy'){
+            return await this.getBestAsk()
+        }else if(order.side==='sell'){
+            return await this.getBestBid()
+        }
+        return null
     }
 }

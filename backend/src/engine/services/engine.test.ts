@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { inmemory_OrderBookStore } from "../../store/orderbook-store";
-import { OrderBook } from "../orderBook/orderBook";
+import { OrderBook } from "./orderBook/orderBook";
 import { StandardEngine } from "./Engine";
 import type { Order } from "../interface/IOrderBook";
 

@@ -1,5 +1,6 @@
 import type { Inmemory_WalletStore } from "../../../store/wallet-store";
 import type { Balance } from "../../interface/Ibalance";
+import type { ITrade } from "../../interface/ITrade";
 import type { IWallet } from "../../interface/Iwallet";
 
 export class Wallet implements  IWallet<Balance>{
@@ -19,7 +20,7 @@ export class Wallet implements  IWallet<Balance>{
     async deposit(userId: string, asset: string, amount: number): Promise<void> {
         this.store.deposit(userId,asset,amount)
     }
-    async settleTrade(trade: Balance): Promise<void> {
+    async settleTrade(trade:ITrade): Promise<void> {
         this.store.settleTrade(trade);
     }
 }

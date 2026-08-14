@@ -1,4 +1,5 @@
 import type { Balance } from "./Ibalance";
+import type { ITrade } from "./ITrade";
 export interface IWallet <T>{
     // Read operations
     getBalance(userId: string, asset: string): Promise<Balance>;
@@ -8,7 +9,7 @@ export interface IWallet <T>{
     unlockFunds(userId: string, asset: string, amount: number): Promise<void>;
     
     // Settlement operations
-    settleTrade(trade: T): Promise<void>;
+    settleTrade(trade: ITrade): Promise<void>;
     
     // Administrative operations
     deposit(userId: string, asset: string, amount: number): Promise<void>;

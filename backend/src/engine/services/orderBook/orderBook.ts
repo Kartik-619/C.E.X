@@ -1,5 +1,5 @@
-import type { Order,IOrderBook } from "../interface/IOrderBook";
-import type { inmemory_OrderBookStore } from "../../store/orderbook-store";
+import type { Order,IOrderBook } from "../../interface/IOrderBook";
+import type { inmemory_OrderBookStore } from "../../../store/orderbook-store";
 
 export class OrderBook  implements IOrderBook{
     private store:inmemory_OrderBookStore;
@@ -22,14 +22,17 @@ export class OrderBook  implements IOrderBook{
         // Delegate to the storage layer
         await this.store.cancelOrder(orderId);
     }
-    getBestAsk():Order|null{
+    getBestBid():Order|null{
         return this.store.getBestBid()
     }
-    getBestSell():Order|null{
-        return this.store.getbestSell()
+    getBestAsk():Order|null{
+        return this.store.getBestAsk()
     }
 
     getOrderBook(): Order[] {
         return this.store.getOrderBook();
+    }
+    findBestMatch(order: Order): Promise<Order | null> {
+        return this.findBestMatch(order);
     }
 }
