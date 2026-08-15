@@ -1,38 +1,68 @@
-import type { Order,IOrderBook } from "../../interface/IOrderBook";
+import type { Order, IOrderBook } from "../../interface/IOrderBook";
 import type { inmemory_OrderBookStore } from "../../../store/orderbook-store";
 
-export class OrderBook  implements IOrderBook{
-    private store:inmemory_OrderBookStore;
-    constructor(store:inmemory_OrderBookStore ){
-    this.store=store;
+export class OrderBook implements IOrderBook {
+    private store: inmemory_OrderBookStore;
+    
+    constructor(store: inmemory_OrderBookStore) {
+        this.store = store;
     }
 
-    async placeOrder(order:Order): Promise<Order> {
+    async placeOrder(order: Order): Promise<Order> {
         if (order.price <= 0) {
             throw new Error("Invalid price");
         }
 
         console.log("[OrderBook] Processing order placement...");
-        
-       return await this.store.placeOrder(order)
+        return await this.store.placeOrder(order);
     }
+
     async cancelOrder(orderId: number): Promise<void> {
         console.log("[OrderBook] Processing order cancellation...");
-        
-        // Delegate to the storage layer
         await this.store.cancelOrder(orderId);
     }
-    getBestBid():Order|null{
-        return this.store.getBestBid()
+
+    async updateOrder(order: Order): Promise<void> {
+        console.log("[OrderBook] Processing order update...");
+        await this.store.updateOrder(order);
     }
-    getBestAsk():Order|null{
-        return this.store.getBestAsk()
+
+    async getOrder(orderId: number): Promise<Order | null> {
+        console.log("[OrderBook] Getting order...");
+        return await this.store.getOrder(orderId);
+    }
+
+    getBestBid(): Order | null {
+        return this.store.getBestBid();
+    }
+
+    getBestAsk(): Order | null {
+        return this.store.getBestAsk();
     }
 
     getOrderBook(): Order[] {
         return this.store.getOrderBook();
     }
-    findBestMatch(order: Order): Promise<Order | null> {
-        return this.findBestMatch(order);
+
+    async findBestMatch(order: Order): Promise<Order | null> {
+        console.log("[OrderBook] Finding best match...");
+        return await this.store.findBestMatch(order);  // ✅ Fixed: delegate to store
+    }
+
+    // Helper methods
+    getOrdersBySide(side: 'buy' | 'sell'): Order[] {
+        return this.store.getOrdersBySide(side);
+    }
+
+    getOrderCount(): number {
+        return this.store.getOrderCount();
+    }
+
+    clearAllOrders(): void {
+        this.store.clearAllOrders();
+    }
+
+    getBestPrice(side: 'buy' | 'sell'): number | null {
+        return this.store.getBestPrice(side);
     }
 }
