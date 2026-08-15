@@ -8,7 +8,7 @@ import type { Balance } from "../interface/Ibalance";
 import type { ITrade } from "../interface/ITrade";
 
 export class StandardEngine extends AbstractEngine<Order> {
-    // Executes logic when receiving a new order
+
 
     // Inject the OrderBook and Wallet into the Engine
     constructor(orderBook: OrderBook, wallet: Wallet) {
@@ -27,7 +27,7 @@ export class StandardEngine extends AbstractEngine<Order> {
 
         const bestMatch = await this.getBestMatch(order);
         if (!bestMatch) {
-            throw new Error("bestMatch not found")
+            return this.orderBook.placeOrder(order);
         }
         this.checkBalances(bestMatch, order)
         const trade=await this.createTrade(bestMatch,order)
@@ -49,8 +49,9 @@ export class StandardEngine extends AbstractEngine<Order> {
         return this.wallet.getBalance(userId, asset);
     }
 
+
     getBestBuy(): Order | null {
-        return this.orderBook.getBestAsk();
+        return this.orderBook.getBestBid();
     }
     getBestSell(): Order | null {
         return this.orderBook.getBestAsk();

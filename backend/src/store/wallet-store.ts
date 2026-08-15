@@ -13,14 +13,17 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
         }
         const userBalance = this.balance.get(userId);
         if (!userBalance) {
-            throw new Error("User doesnt exist");
+            // Return empty balance instead of throwing
+            return { available: 0, locked: 0 };
         }
         const currentBalance = userBalance?.get(asset);
         if (!currentBalance) {
-            throw new Error("No enteries for this UserId")
+            // Return empty balance instead of throwing
+            return { available: 0, locked: 0 };
         }
         return currentBalance;
     }
+    
     async checkBalance(userId:string,asset:string,amount:number):Promise<boolean>{
         if (!userId) {
             throw new Error("Invalid User");
@@ -80,77 +83,119 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
     };
     // Settlement operations
     async settleTrade(trade: ITrade): Promise<void> {
-        // Validate trade
-        if (!trade.buyerId || !trade.sellerId || !trade.symbol) {
-            throw new Error('Invalid trade data: missing buyer, seller, or symbol');
+        // 1. Validate trade
+        if (
+            !trade.buyerId ||
+            !trade.sellerId ||
+            !trade.symbol
+        ) {
+            throw new Error(
+                "Invalid trade data: missing buyer, seller, or symbol"
+            );
         }
-        
+    
         if (trade.price <= 0 || trade.quantity <= 0) {
-            throw new Error('Invalid trade price or quantity');
+            throw new Error("Invalid trade price or quantity");
         }
-
-        const cashAmount = trade.price * trade.quantity;
-        const assetSymbol = trade.symbol.split('/')[0];
-        
-        if (!assetSymbol) {
-            throw new Error(`Invalid symbol format: ${trade.symbol}`);
+    
+        // 2. Extract assets
+        const [baseAsset, quoteAsset] = trade.symbol.split("/");
+    
+        if (!baseAsset || !quoteAsset) {
+            throw new Error(
+                `Invalid trading pair: ${trade.symbol}`
+            );
         }
-
-        // Get buyer's balances
-        let buyerBalance = this.balance.get(trade.buyerId);
+    
+        const tradeValue = trade.price * trade.quantity;
+    
+        // 3. Get buyer
+        const buyerBalance = this.balance.get(trade.buyerId);
+    
         if (!buyerBalance) {
-            buyerBalance = new Map();
-            this.balance.set(trade.buyerId, buyerBalance);
+            throw new Error(
+                `Buyer ${trade.buyerId} does not exist`
+            );
         }
-        
-        // Get seller's balances
-        let sellerBalance = this.balance.get(trade.sellerId);
+    
+        // 4. Get seller
+        const sellerBalance = this.balance.get(trade.sellerId);    
         if (!sellerBalance) {
-            sellerBalance = new Map();
-            this.balance.set(trade.sellerId, sellerBalance);
+            throw new Error(
+                `Seller ${trade.sellerId} does not exist`
+            );
         }
-
-        // --- BUYER SIDE ---
-        // 1. Deduct cash from buyer
-        let buyerCash = buyerBalance.get(trade.symbol);
-        if (!buyerCash) {
-            buyerCash = { available: 0, locked: 0 };
-            buyerBalance.set(trade.symbol, buyerCash);
+    
+        // 5. Get buyer's quote balance
+        // BTC/USD -> USD
+        const buyerQuote = buyerBalance.get(quoteAsset);
+    
+        if (!buyerQuote) {
+            throw new Error(
+                `Buyer ${trade.buyerId} has no ${quoteAsset} balance`
+            );
         }
-        
-        if (buyerCash.available < cashAmount) {
-            throw new Error(`Insufficient funds for buyer ${trade.buyerId}. Need ${cashAmount}, have ${buyerCash.available}`);
+    
+        // 6. Get buyer's base balance
+        // BTC/USD -> BTC
+        let buyerBase = buyerBalance.get(baseAsset);
+    
+        if (!buyerBase) {
+            buyerBase = {
+                available: 0,
+                locked: 0
+            };
+    
+            buyerBalance.set(baseAsset, buyerBase);
         }
-        buyerCash.available -= cashAmount;
-        
-        // 2. Credit asset to buyer
-        let buyerAsset = buyerBalance.get(assetSymbol);
-        if (!buyerAsset) {
-            buyerAsset = { available: 0, locked: 0 };
-            buyerBalance.set(assetSymbol, buyerAsset);
+    
+        // 7. Get seller's base balance
+        const sellerBase = sellerBalance.get(baseAsset);
+    
+        if (!sellerBase) {
+            throw new Error(
+                `Seller ${trade.sellerId} has no ${baseAsset} balance`
+            );
         }
-        buyerAsset.available += trade.quantity;
-
-        // --- SELLER SIDE ---
-        // 3. Deduct asset from seller
-        let sellerAsset = sellerBalance.get(assetSymbol);
-        if (!sellerAsset) {
-            sellerAsset = { available: 0, locked: 0 };
-            sellerBalance.set(assetSymbol, sellerAsset);
+    
+        // 8. Get seller's quote balance
+        let sellerQuote = sellerBalance.get(quoteAsset);
+    
+        if (!sellerQuote) {
+            sellerQuote = {
+                available: 0,
+                locked: 0
+            };
+    
+            sellerBalance.set(quoteAsset, sellerQuote);
         }
-        
-        if (sellerAsset.available < trade.quantity) {
-            throw new Error(`Insufficient asset for seller ${trade.sellerId}. Need ${trade.quantity}, have ${sellerAsset.available}`);
+    
+        // BUYER
+        // Buyer already locked the USD when the order was accepted.
+        if (buyerQuote.locked < tradeValue) {
+            throw new Error(
+                `Buyer ${trade.buyerId} does not have enough locked ${quoteAsset}`
+            );
         }
-        sellerAsset.available -= trade.quantity;
-        
-        // 4. Credit cash to seller
-        let sellerCash = sellerBalance.get(trade.symbol);
-        if (!sellerCash) {
-            sellerCash = { available: 0, locked: 0 };
-            sellerBalance.set(trade.symbol, sellerCash);
-        }
-        sellerCash.available += cashAmount;
+    
+        // Consume the locked USD.
+        buyerQuote.locked -= tradeValue;
+    
+        // Give BTC to buyer.
+        buyerBase.available += trade.quantity;
+    
+        // SELLER    
+        // Seller already locked the BTC when the order was accepted.
+        if (sellerBase.locked < trade.quantity) {
+            throw new Error(
+                `Seller ${trade.sellerId} does not have enough locked ${baseAsset}`
+            );
+        }    
+        // Consume the locked BTC.
+        sellerBase.locked -= trade.quantity;
+    
+        // Give USD to seller.
+        sellerQuote.available += tradeValue;
     }
 
     // Administrative operations
