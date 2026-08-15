@@ -9,4 +9,6 @@ export interface ITrade {
     symbol: string;
     price: number;
     quantity: number;
+    totalValue:number;
+    timestamp:Date;
 }
