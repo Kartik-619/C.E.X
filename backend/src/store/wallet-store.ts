@@ -39,45 +39,61 @@ async checkBalance(userId: string, asset: string, amount: number): Promise<boole
     return currentBalance.available >= amount;
 }
 
-    async lockFunds(userId: string, asset: string, amount: number): Promise<void> {
-        if (!userId) {
-            throw new Error("Invalid User");
-        }
-        let userBalance = this.balance.get(userId);
-        if (!userBalance) {
-            throw new Error("User doesnt exist");
-        }
-        let currentBalance = userBalance.get(asset);
-        if (!currentBalance) {
-            throw new Error("No enteries for this UserId")
-        }
-        if (currentBalance.available< amount) {
-            throw new Error(`Insufficient ${asset} balance for user ${userId}`);
-        }
-        currentBalance.available -= amount;
-        currentBalance.locked += amount;
-    };
-    async unlockFunds(userId: string, asset: string, amount: number): Promise<void> {
-        if (!userId) {
-            throw new Error("Invalid User");
-        }
-        let userBalance = this.balance.get(userId);
-        if (!userBalance) {
-            throw new Error("User doesnt exist");
-        }
-        let currentBalance = userBalance.get(asset);
-        if (!currentBalance) {
-            throw new Error("No enteries for this UserId")
-        }
-        if (currentBalance.locked< amount) {
-            throw new Error(`Insufficient ${asset} balance for user ${userId}`);
-        }
-        currentBalance.locked -= amount;
-        currentBalance.available +=amount;
-
-    };
+async lockFunds(userId: string, asset: string, amount: number): Promise<void> {
+    if (!userId) {
+        throw new Error("Invalid User");
+    }
+    
+    // Get or create user balance
+    let userBalance = this.balance.get(userId);
+    if (!userBalance) {
+        userBalance = new Map();
+        this.balance.set(userId, userBalance);
+    }
+    
+    // Get or create asset balance
+    let currentBalance = userBalance.get(asset);
+    if (!currentBalance) {
+        currentBalance = { available: 0, locked: 0 };
+        userBalance.set(asset, currentBalance);
+    }
+    
+    if (currentBalance.available < amount) {
+        throw new Error(`Insufficient ${asset} balance for user ${userId}`);
+    }
+    
+    currentBalance.available -= amount;
+    currentBalance.locked += amount;
+}
+async unlockFunds(userId: string, asset: string, amount: number): Promise<void> {
+    if (!userId) {
+        throw new Error("Invalid User");
+    }
+    
+    // Get or create user balance
+    let userBalance = this.balance.get(userId);
+    if (!userBalance) {
+        userBalance = new Map();
+        this.balance.set(userId, userBalance);
+    }
+    
+    // Get or create asset balance
+    let currentBalance = userBalance.get(asset);
+    if (!currentBalance) {
+        currentBalance = { available: 0, locked: 0 };
+        userBalance.set(asset, currentBalance);
+    }
+    
+    if (currentBalance.locked < amount) {
+        throw new Error(`Insufficient locked ${asset} balance for user ${userId}`);
+    }
+    
+    currentBalance.locked -= amount;
+    currentBalance.available += amount;
+}
     // Settlement operations
-    async settleTrade(trade: ITrade): Promise<void> {
+  
+  async settleTrade(trade: ITrade): Promise<void> {
         // 1. Validate trade
         if (
             !trade.buyerId ||
@@ -192,7 +208,6 @@ async checkBalance(userId: string, asset: string, amount: number): Promise<boole
         // Give USD to seller.
         sellerQuote.available += tradeValue;
     }
-
     // Administrative operations
     async deposit(userId: string, asset: string, amount: number): Promise<void> {
         if (!userId) {

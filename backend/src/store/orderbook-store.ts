@@ -36,17 +36,13 @@ export class inmemory_OrderBookStore implements IOrderBook {
             this.bids = this.bids.filter(o => o.orderId !== orderId);
             this.asks = this.asks.filter(o => o.orderId !== orderId);
             this.orders.delete(orderId);
-            
+
             console.log("Removing order:", orderId);
         }
         return Promise.resolve();
     }
 
-    async updateOrder(
-        orderId: number,
-        quantity: number
-    ): Promise<Order> {
-    
+    async updateOrder(orderId: number, quantity: number): Promise<Order> {
         const order = this.orders.get(orderId);
     
         if (!order) {
@@ -57,10 +53,16 @@ export class inmemory_OrderBookStore implements IOrderBook {
             throw new Error("Quantity cannot be negative");
         }
     
-        // Fully filled
+        // Fully filled - cancel and return the cancelled order
         if (quantity === 0) {
+            // Get a copy of the order before cancellation
+            const cancelledOrder = { ...order, quantity: 0 };
+            
+            // Cancel the order (removes from book)
             await this.cancelOrder(orderId);
-            throw new Error(`Order ${orderId} is completely filled`);
+            
+            // Return the cancelled order with quantity 0
+            return cancelledOrder;
         }
     
         // Update quantity
@@ -76,7 +78,12 @@ export class inmemory_OrderBookStore implements IOrderBook {
             );
     
             if (index !== -1) {
-                this.bids[index] = order;
+                this.bids[index] = { ...order };
+                // Re-sort
+                this.bids.sort((a, b) => {
+                    if (b.price !== a.price) return b.price - a.price;
+                    return a.createdAt - b.createdAt;
+                });
             }
         } else {
             const index = this.asks.findIndex(
@@ -84,7 +91,12 @@ export class inmemory_OrderBookStore implements IOrderBook {
             );
     
             if (index !== -1) {
-                this.asks[index] = order;
+                this.asks[index] = { ...order };
+                // Re-sort
+                this.asks.sort((a, b) => {
+                    if (a.price !== b.price) return a.price - b.price;
+                    return a.createdAt - b.createdAt;
+                });
             }
         }
     
@@ -99,7 +111,7 @@ export class inmemory_OrderBookStore implements IOrderBook {
         const best = this.bids[0];
         return best ?? null; // ✅ Works: best is Order | undefined, returns Order | null
     }
-    
+
     getBestAsk(): Order | null {
         const best = this.asks[0];
         return best ?? null; // ✅ Works: best is Order | undefined, returns Order | null
@@ -115,7 +127,7 @@ export class inmemory_OrderBookStore implements IOrderBook {
         if (order.side === 'buy') {
             // For a BUY order, find the best ask (cheapest seller)
             bestMatch = this.getBestAsk();
-            
+
             if (bestMatch) {
                 // Check price compatibility: buy price must be >= ask price
                 if (bestMatch.price > order.price) {
@@ -129,7 +141,7 @@ export class inmemory_OrderBookStore implements IOrderBook {
         } else if (order.side === 'sell') {
             // For a SELL order, find the best bid (highest buyer)
             bestMatch = this.getBestBid();
-            
+
             if (bestMatch) {
                 // Check price compatibility: bid price must be >= sell price
                 if (bestMatch.price < order.price) {

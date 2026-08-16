@@ -28,8 +28,8 @@ export class OrderBook implements IOrderBook {
             throw new Error(" Not found")
         }
         console.log("[OrderBook] Processing order update...");
-        await this.store.updateOrder(orderId,quantity);
-        return order
+        return  await this.store.updateOrder(orderId,quantity);
+        
     }
 
     async getOrder(orderId: number): Promise<Order | null> {

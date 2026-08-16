@@ -23,6 +23,9 @@ export class StandardEngine extends AbstractEngine<Order> {
             `[Engine] Received new ${order.type} order for ${order.symbol}`
         );
     
+        // ✅ Validate balance before anything else
+        await this.validateOrderBalance(order);
+    
         const bestMatch = await this.getBestMatch(order);
     
         // No match -> add incoming order to book
@@ -57,26 +60,31 @@ export class StandardEngine extends AbstractEngine<Order> {
         const sellRemaining =
             sellOrder.quantity - trade.quantity;
     
+        // ✅ FIX: Safely parse the symbol
+        const parts = buyOrder.symbol.split("/");
+        if (parts.length !== 2) {
+            throw new Error(`Invalid trading pair format: ${buyOrder.symbol}. Expected format: "BTC/USD"`);
+        }
+        const [baseAsset, quoteAsset] = parts as [string, string];
+    
         // UPDATE BUY ORDER    
         if (buyRemaining === 0) {
-    
-            // If it exists in the book, remove it
             const existingBuy =
                 await this.orderBook.getOrder(buyOrder.orderId);
     
             if (existingBuy) {
-                await this.orderBook.cancelOrder(  buyOrder.orderId );
+                await this.orderBook.cancelOrder(buyOrder.orderId);
             }
-    
         } else {
-    
             const existingBuy =
                 await this.orderBook.getOrder(buyOrder.orderId);
     
             if (existingBuy) {
-    
-                await this.orderBook.updateOrder(buyOrder.orderId,  buyRemaining);
-    
+                await this.orderBook.updateOrder(buyOrder.orderId, buyRemaining);
+                
+                // ✅ RE-LOCK remaining funds for the buy order
+                const remainingCost = buyOrder.price * buyRemaining;
+                await this.wallet.lockFunds(buyOrder.userId, quoteAsset, remainingCost);
             } else {
                 // Incoming order was partially filled
                 // so add the remaining quantity
@@ -87,21 +95,20 @@ export class StandardEngine extends AbstractEngine<Order> {
     
         // UPDATE SELL ORDER
         if (sellRemaining === 0) {
-    
             const existingSell =
                 await this.orderBook.getOrder(sellOrder.orderId);
             if (existingSell) {
                 await this.orderBook.cancelOrder(sellOrder.orderId);
             }
-    
         } else {
-    
             const existingSell =
                 await this.orderBook.getOrder(sellOrder.orderId);
     
             if (existingSell) {
-    
                 await this.orderBook.updateOrder(sellOrder.orderId, sellRemaining);
+                
+                // ✅ RE-LOCK remaining funds for the sell order
+                await this.wallet.lockFunds(sellOrder.userId, baseAsset, sellRemaining);
             } else {
                 sellOrder.quantity = sellRemaining;
                 await this.orderBook.placeOrder(sellOrder);
@@ -157,34 +164,69 @@ export class StandardEngine extends AbstractEngine<Order> {
         return this.orderBook.findBestMatch(order);
     }
     private async getBestMatch(order: Order): Promise<Order | null> {
-        let bestMatch: Order | null = null;
 
-        if (order.side === 'buy') {
-
-            bestMatch = this.getBestBuy(); // or getBestSell()
-
-            // Check if the match is valid (buy price >= ask price)
-            if (bestMatch && bestMatch.price > order.price) {
-                // Seller is asking for more than buyer wants to pay
-
-                return null; // No valid match
+        if (order.side === "buy") {
+    
+            // BUY matches against SELL
+            const bestAsk = this.getBestSell();
+    
+            if (!bestAsk) {
+                return null;
             }
-        } else if (order.side === 'sell') {
-            // For a SELL order, find the HIGHEST bidder (best buyer)
-            bestMatch = this.getBestSell(); // or getBestBuy()
-
-            // Check if the match is valid (bid price >= sell price)
-            if (bestMatch && bestMatch.price < order.price) {
-                // Buyer is offering less than seller wants
-
-                return null; // No valid match
+    
+            // Buyer must be willing to pay seller's price
+            if (bestAsk.price > order.price) {
+                return null;
             }
+    
+            return bestAsk;
         }
-
-        return bestMatch;
+    
+        // SELL matches against BUY
+        const bestBid = this.getBestBuy();
+    
+        if (!bestBid) {
+            return null;
+        }
+    
+        // Seller must accept buyer's price
+        if (bestBid.price < order.price) {
+            return null;
+        }
+    
+        return bestBid;
     }
 
-
+    private async validateOrderBalance(order: Order): Promise<void> {
+        const [baseAsset, quoteAsset] = order.symbol.split("/");
+        
+        if (!baseAsset || !quoteAsset) {
+            throw new Error(`Invalid trading pair: ${order.symbol}`);
+        }
+        
+        if (order.side === 'buy') {
+            // Buyer needs enough quote currency (e.g., USD)
+            const totalCost = order.price * order.quantity;
+            const balance = await this.wallet.getBalance(order.userId, quoteAsset);
+            
+            if (balance.available < totalCost) {
+                throw new Error(
+                    `Insufficient ${quoteAsset} balance for buyer ${order.userId}. ` +
+                    `Need ${totalCost}, have ${balance.available}`
+                );
+            }
+        } else if (order.side === 'sell') {
+            // Seller needs enough base asset (e.g., BTC)
+            const balance = await this.wallet.getBalance(order.userId, baseAsset);
+            
+            if (balance.available < order.quantity) {
+                throw new Error(
+                    `Insufficient ${baseAsset} balance for seller ${order.userId}. ` +
+                    `Need ${order.quantity}, have ${balance.available}`
+                );
+            }
+        }
+    }
     private async checkBalances(
         order1: Order,
         order2: Order
