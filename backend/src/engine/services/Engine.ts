@@ -6,6 +6,7 @@ import type { Order } from "../interface/IOrderBook";
 import type { Wallet } from "./wallet/wallet";
 import type { Balance } from "../interface/Ibalance";
 import type { ITrade } from "../interface/ITrade";
+import { toString } from "node:ffi";
 
 export class StandardEngine extends AbstractEngine<Order> {
 
@@ -42,6 +43,33 @@ export class StandardEngine extends AbstractEngine<Order> {
     }
     async cancelOrder(orderId: number): Promise<void> {
         console.log(`[Engine] Requesting cancellation for order ${orderId}`);
+    
+        const order = await this.orderBook.getOrder(orderId);
+    
+        if (!order) {
+            throw new Error("Order can't be found");
+        }
+    
+        const [baseAsset, quoteAsset] = order.symbol.split("/");
+    
+        if (!baseAsset || !quoteAsset) {
+            throw new Error(`Invalid symbol: ${order.symbol}`);
+        }
+    
+        const asset = order.side === "buy"
+            ? quoteAsset
+            : baseAsset;
+    
+        const amount = order.side === "buy"
+            ? order.price * order.quantity
+            : order.quantity;
+    
+        await this.wallet.unlockFunds(
+            order.userId,
+            asset,
+            amount
+        );
+    
         await this.orderBook.cancelOrder(orderId);
     }
 
@@ -88,29 +116,88 @@ export class StandardEngine extends AbstractEngine<Order> {
     }
 
 
-    private async checkBalances(buyOrder: Order, sellOrder: Order): Promise<void> {
+    private async checkBalances(
+        order1: Order,
+        order2: Order
+    ): Promise<void> {
+    
+        const buyOrder =
+            order1.side === "buy" ? order1 : order2;
+    
+        const sellOrder =
+            order1.side === "sell" ? order1 : order2;
+    
         if (!buyOrder.userId) {
-            throw new Error("Buyer Id invalid")
+            throw new Error("Buyer ID invalid");
         }
+    
         if (!sellOrder.userId) {
-            throw new Error("Seller Id invalid")
+            throw new Error("Seller ID invalid");
         }
-        // Determine which is buy and which is sell
-        const buySide = buyOrder.side === 'buy' ? buyOrder : sellOrder;
-        const sellSide = sellOrder.side === 'sell' ? sellOrder : buyOrder;
-
-        const tradePrice = sellOrder.price * sellOrder.quantity;
-        const baseS = 'BTC'
-        const quoteS = 'USD'
-        //checkBalance
-        if (!this.wallet.checkBalance(buyOrder.userId, quoteS, sellOrder.price)) {
-            throw new Error("buyer has invalid funds")
+    
+        const [baseAsset, quoteAsset] =
+            buyOrder.symbol.split("/");
+    
+        if (!baseAsset || !quoteAsset) {
+            throw new Error(
+                `Invalid trading pair: ${buyOrder.symbol}`
+            );
         }
-        if (!this.wallet.checkBalance(sellOrder.userId, baseS, buyOrder.price)) {
-            throw new Error("seller has invalid fund")
+    
+        // Only the quantity actually being traded
+        // needs to be locked.
+        const quantity = Math.min(
+            buyOrder.quantity,
+            sellOrder.quantity
+        );
+    
+        // Trade executes at seller's price.
+        const tradeValue =
+            sellOrder.price * quantity;
+    
+        // -----------------------------
+        // BUYER
+        // -----------------------------
+    
+        const buyerHasFunds =
+            await this.wallet.checkBalance(
+                buyOrder.userId,
+                quoteAsset,
+                tradeValue
+            );
+    
+        if (!buyerHasFunds) {
+            throw new Error(
+                `Buyer ${buyOrder.userId} has insufficient ${quoteAsset}`
+            );
         }
-        this.wallet.lockFunds(buyOrder.userId, buyOrder.symbol, buyOrder.price)
-        this.wallet.lockFunds(sellOrder.userId, sellOrder.symbol, sellOrder.price)
+    
+        // SELLER
+        const sellerHasFunds =
+            await this.wallet.checkBalance(
+                sellOrder.userId,
+                baseAsset,
+                quantity
+            );
+    
+        if (!sellerHasFunds) {
+            throw new Error(
+                `Seller ${sellOrder.userId} has insufficient ${baseAsset}`
+            );
+        }
+       
+        // LOCK
+        await this.wallet.lockFunds(
+            buyOrder.userId,
+            quoteAsset,
+            tradeValue
+        );
+    
+        await this.wallet.lockFunds(
+            sellOrder.userId,
+            baseAsset,
+            quantity
+        );
     }
    
     private createTrade(order1: Order, order2: Order): ITrade {
