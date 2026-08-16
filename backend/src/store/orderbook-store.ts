@@ -42,42 +42,53 @@ export class inmemory_OrderBookStore implements IOrderBook {
         return Promise.resolve();
     }
 
-    async updateOrder(order: Order): Promise<void> {
-        if (!this.orders.has(order.orderId)) {
-            throw new Error(`Order ${order.orderId} not found`);
+    async updateOrder(
+        orderId: number,
+        quantity: number
+    ): Promise<Order> {
+    
+        const order = this.orders.get(orderId);
+    
+        if (!order) {
+            throw new Error(`Order ${orderId} not found`);
         }
-
-        // If quantity is 0 or less, cancel the order
-        if (order.quantity <= 0) {
-            await this.cancelOrder(order.orderId);
-            return;
+    
+        if (quantity < 0) {
+            throw new Error("Quantity cannot be negative");
         }
-
-        // Update the order in the map
-        this.orders.set(order.orderId, order);
-
-        // Update the appropriate list
-        if (order.side === 'buy') {
-            const index = this.bids.findIndex(o => o.orderId === order.orderId);
+    
+        // Fully filled
+        if (quantity === 0) {
+            await this.cancelOrder(orderId);
+            throw new Error(`Order ${orderId} is completely filled`);
+        }
+    
+        // Update quantity
+        order.quantity = quantity;
+    
+        // Update Map
+        this.orders.set(orderId, order);
+    
+        // Update array reference
+        if (order.side === "buy") {
+            const index = this.bids.findIndex(
+                o => o.orderId === orderId
+            );
+    
             if (index !== -1) {
-                this.bids[index] = { ...order };
-                // Re-sort
-                this.bids.sort((a, b) => {
-                    if (b.price !== a.price) return b.price - a.price;
-                    return a.createdAt - b.createdAt;
-                });
+                this.bids[index] = order;
             }
-        } else if (order.side === 'sell') {
-            const index = this.asks.findIndex(o => o.orderId === order.orderId);
+        } else {
+            const index = this.asks.findIndex(
+                o => o.orderId === orderId
+            );
+    
             if (index !== -1) {
-                this.asks[index] = { ...order };
-                // Re-sort
-                this.asks.sort((a, b) => {
-                    if (a.price !== b.price) return a.price - b.price;
-                    return a.createdAt - b.createdAt;
-                });
+                this.asks[index] = order;
             }
         }
+    
+        return order;
     }
 
     async getOrder(orderId: number): Promise<Order | null> {

@@ -3,8 +3,8 @@
 export interface IOrderBook {
     placeOrder(order: Order): Promise<Order>;
     cancelOrder(orderId: number): Promise<void>;
-    updateOrder(order: Order): Promise<void>;      // Add this
-    getOrder(orderId: number): Promise<Order | null>; // Add this
+   updateOrder(orderId: number,quantity: number): Promise<Order>;
+        getOrder(orderId: number): Promise<Order | null>; // Add this
     getBestBid(): Order | null;
     getBestAsk(): Order | null;
     getOrderBook(): Order[];

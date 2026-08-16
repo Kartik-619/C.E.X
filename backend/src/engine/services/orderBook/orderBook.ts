@@ -22,9 +22,14 @@ export class OrderBook implements IOrderBook {
         await this.store.cancelOrder(orderId);
     }
 
-    async updateOrder(order: Order): Promise<void> {
+  async updateOrder( orderId:number, quantity:number): Promise<Order> {
+        const order =await this.store.getOrder(orderId);
+        if(!order){
+            throw new Error(" Not found")
+        }
         console.log("[OrderBook] Processing order update...");
-        await this.store.updateOrder(order);
+        await this.store.updateOrder(orderId,quantity);
+        return order
     }
 
     async getOrder(orderId: number): Promise<Order | null> {

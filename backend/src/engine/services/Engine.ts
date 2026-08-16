@@ -4,9 +4,7 @@ import { AbstractEngine } from "../interface/IMatchEngine";
 import { OrderBook } from "./orderBook/orderBook";
 import type { Order } from "../interface/IOrderBook";
 import type { Wallet } from "./wallet/wallet";
-import type { Balance } from "../interface/Ibalance";
 import type { ITrade } from "../interface/ITrade";
-import { toString } from "node:ffi";
 
 export class StandardEngine extends AbstractEngine<Order> {
 
@@ -21,25 +19,96 @@ export class StandardEngine extends AbstractEngine<Order> {
     }
 
     async processOrder(order: Order): Promise<Order> {
-        console.log(`[Engine] Received new ${order.type} order for ${order.symbol}`);
-
-        // Delegate to OrderBook
-
-
+        console.log(
+            `[Engine] Received new ${order.type} order for ${order.symbol}`
+        );
+    
         const bestMatch = await this.getBestMatch(order);
+    
+        // No match -> add incoming order to book
         if (!bestMatch) {
-            return this.orderBook.placeOrder(order);
-        }
-        this.checkBalances(bestMatch, order)
-        const trade=await this.createTrade(bestMatch,order)
-        if(!trade){
-            throw new Error("failed to make trade ")
+            return await this.orderBook.placeOrder(order);
         }
     
-        this.wallet.settleTrade(trade)
-        //update order
-        return bestMatch //tobe fixed
-
+        // Validate balances + lock funds
+        await this.checkBalances(bestMatch, order);
+    
+        // Create trade
+        const trade = this.createTrade(bestMatch, order);
+    
+        // Settle trade
+        await this.wallet.settleTrade(trade);
+    
+        // Determine which is BUY and SELL
+        const buyOrder =
+            order.side === "buy"
+                ? order
+                : bestMatch;
+    
+        const sellOrder =
+            order.side === "sell"
+                ? order
+                : bestMatch;
+    
+        // Calculate remaining quantities
+        const buyRemaining =
+            buyOrder.quantity - trade.quantity;
+    
+        const sellRemaining =
+            sellOrder.quantity - trade.quantity;
+    
+        // UPDATE BUY ORDER    
+        if (buyRemaining === 0) {
+    
+            // If it exists in the book, remove it
+            const existingBuy =
+                await this.orderBook.getOrder(buyOrder.orderId);
+    
+            if (existingBuy) {
+                await this.orderBook.cancelOrder(  buyOrder.orderId );
+            }
+    
+        } else {
+    
+            const existingBuy =
+                await this.orderBook.getOrder(buyOrder.orderId);
+    
+            if (existingBuy) {
+    
+                await this.orderBook.updateOrder(buyOrder.orderId,  buyRemaining);
+    
+            } else {
+                // Incoming order was partially filled
+                // so add the remaining quantity
+                buyOrder.quantity = buyRemaining;
+                await this.orderBook.placeOrder(buyOrder);
+            }
+        }
+    
+        // UPDATE SELL ORDER
+        if (sellRemaining === 0) {
+    
+            const existingSell =
+                await this.orderBook.getOrder(sellOrder.orderId);
+            if (existingSell) {
+                await this.orderBook.cancelOrder(sellOrder.orderId);
+            }
+    
+        } else {
+    
+            const existingSell =
+                await this.orderBook.getOrder(sellOrder.orderId);
+    
+            if (existingSell) {
+    
+                await this.orderBook.updateOrder(sellOrder.orderId, sellRemaining);
+            } else {
+                sellOrder.quantity = sellRemaining;
+                await this.orderBook.placeOrder(sellOrder);
+            }
+        }
+    
+        return order;
     }
     async cancelOrder(orderId: number): Promise<void> {
         console.log(`[Engine] Requesting cancellation for order ${orderId}`);
