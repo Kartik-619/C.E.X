@@ -17,106 +17,108 @@ export class StandardEngine extends AbstractEngine<Order> {
     async createOrder(order: Order) {
         const savedOrder = this.orderBook.placeOrder(order);
     }
-
     async processOrder(order: Order): Promise<Order> {
         console.log(
             `[Engine] Received new ${order.type} order for ${order.symbol}`
         );
     
-        // ✅ Validate balance before anything else
+        // 1. Validate that the user can afford the order
         await this.validateOrderBalance(order);
     
+        // 2. Find a matching order
         const bestMatch = await this.getBestMatch(order);
     
-        // No match -> add incoming order to book
+        // 3. No match -> lock funds and add to book
         if (!bestMatch) {
+            await this.lockOrderFunds(order);
             return await this.orderBook.placeOrder(order);
         }
     
-        // Validate balances + lock funds
-        await this.checkBalances(bestMatch, order);
+        // 4. Match found -> lock funds for the incoming order
+        await this.lockOrderFunds(order);
     
-        // Create trade
+        // 5. Create and settle trade
         const trade = this.createTrade(bestMatch, order);
-    
-        // Settle trade
         await this.wallet.settleTrade(trade);
     
-        // Determine which is BUY and SELL
-        const buyOrder =
-            order.side === "buy"
-                ? order
-                : bestMatch;
+        // 6. Calculate remaining quantities
+        const buyOrder = order.side === "buy" ? order : bestMatch;
+        const sellOrder = order.side === "sell" ? order : bestMatch;
     
-        const sellOrder =
-            order.side === "sell"
-                ? order
-                : bestMatch;
+        const buyRemaining = buyOrder.quantity - trade.quantity;
+        const sellRemaining = sellOrder.quantity - trade.quantity;
     
-        // Calculate remaining quantities
-        const buyRemaining =
-            buyOrder.quantity - trade.quantity;
-    
-        const sellRemaining =
-            sellOrder.quantity - trade.quantity;
-    
-        // ✅ FIX: Safely parse the symbol
-        const parts = buyOrder.symbol.split("/");
-        if (parts.length !== 2) {
-            throw new Error(`Invalid trading pair format: ${buyOrder.symbol}. Expected format: "BTC/USD"`);
-        }
-        const [baseAsset, quoteAsset] = parts as [string, string];
-    
-        // UPDATE BUY ORDER    
+        // 7. Update BUY order
         if (buyRemaining === 0) {
-            const existingBuy =
-                await this.orderBook.getOrder(buyOrder.orderId);
-    
+            const existingBuy = await this.orderBook.getOrder(buyOrder.orderId);
             if (existingBuy) {
                 await this.orderBook.cancelOrder(buyOrder.orderId);
             }
         } else {
-            const existingBuy =
-                await this.orderBook.getOrder(buyOrder.orderId);
-    
+            const existingBuy = await this.orderBook.getOrder(buyOrder.orderId);
             if (existingBuy) {
                 await this.orderBook.updateOrder(buyOrder.orderId, buyRemaining);
-                
-                // ✅ RE-LOCK remaining funds for the buy order
-                const remainingCost = buyOrder.price * buyRemaining;
-                await this.wallet.lockFunds(buyOrder.userId, quoteAsset, remainingCost);
             } else {
-                // Incoming order was partially filled
-                // so add the remaining quantity
-                buyOrder.quantity = buyRemaining;
-                await this.orderBook.placeOrder(buyOrder);
+                await this.orderBook.placeOrder({
+                    ...buyOrder,
+                    quantity: buyRemaining
+                });
             }
         }
     
-        // UPDATE SELL ORDER
+        // 8. Update SELL order
         if (sellRemaining === 0) {
-            const existingSell =
-                await this.orderBook.getOrder(sellOrder.orderId);
+            const existingSell = await this.orderBook.getOrder(sellOrder.orderId);
             if (existingSell) {
                 await this.orderBook.cancelOrder(sellOrder.orderId);
             }
         } else {
-            const existingSell =
-                await this.orderBook.getOrder(sellOrder.orderId);
-    
+            const existingSell = await this.orderBook.getOrder(sellOrder.orderId);
             if (existingSell) {
                 await this.orderBook.updateOrder(sellOrder.orderId, sellRemaining);
-                
-                // ✅ RE-LOCK remaining funds for the sell order
-                await this.wallet.lockFunds(sellOrder.userId, baseAsset, sellRemaining);
             } else {
-                sellOrder.quantity = sellRemaining;
-                await this.orderBook.placeOrder(sellOrder);
+                await this.orderBook.placeOrder({
+                    ...sellOrder,
+                    quantity: sellRemaining
+                });
             }
         }
     
         return order;
     }
+
+    private async lockOrderFunds(order: Order): Promise<void> {
+
+        const [baseAsset, quoteAsset] =
+            order.symbol.split("/");
+    
+        if (!baseAsset || !quoteAsset) {
+            throw new Error(
+                `Invalid trading pair: ${order.symbol}`
+            );
+        }
+    
+        if (order.side === "buy") {
+    
+            const amount =
+                order.price * order.quantity;
+    
+            await this.wallet.lockFunds(
+                order.userId,
+                quoteAsset,
+                amount
+            );
+    
+        } else {
+    
+            await this.wallet.lockFunds(
+                order.userId,
+                baseAsset,
+                order.quantity
+            );
+        }
+    }
+
     async cancelOrder(orderId: number): Promise<void> {
         console.log(`[Engine] Requesting cancellation for order ${orderId}`);
     

@@ -100,7 +100,6 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(sellOrder);
 
-
         const buyOrder = createOrder(
             2,
             "buy",
@@ -111,51 +110,27 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(buyOrder);
 
-
         // ----------------------------------------------------
         // Alice
         // ----------------------------------------------------
 
-        const aliceUSD =
-            await wallet.getBalance(
-                "alice",
-                "USD"
-            );
-
-        const aliceBTC =
-            await wallet.getBalance(
-                "alice",
-                "BTC"
-            );
-
+        const aliceUSD = await wallet.getBalance("alice", "USD");
+        const aliceBTC = await wallet.getBalance("alice", "BTC");
 
         expect(aliceUSD.available).toBe(0);
         expect(aliceUSD.locked).toBe(0);
-
         expect(aliceBTC.available).toBe(1);
         expect(aliceBTC.locked).toBe(0);
-
 
         // ----------------------------------------------------
         // Bob
         // ----------------------------------------------------
 
-        const bobBTC =
-            await wallet.getBalance(
-                "bob",
-                "BTC"
-            );
-
-        const bobUSD =
-            await wallet.getBalance(
-                "bob",
-                "USD"
-            );
-
+        const bobBTC = await wallet.getBalance("bob", "BTC");
+        const bobUSD = await wallet.getBalance("bob", "USD");
 
         expect(bobBTC.available).toBe(0);
         expect(bobBTC.locked).toBe(0);
-
         expect(bobUSD.available).toBe(100);
         expect(bobUSD.locked).toBe(0);
     });
@@ -177,7 +152,6 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(sellOrder);
 
-
         const buyOrder = createOrder(
             2,
             "buy",
@@ -188,35 +162,29 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(buyOrder);
 
-
         // ----------------------------------------------------
         // No trade should have happened
         // ----------------------------------------------------
 
-        const aliceUSD =
-            await wallet.getBalance(
-                "alice",
-                "USD"
-            );
+        const aliceUSD = await wallet.getBalance("alice", "USD");
+        const aliceBTC = await wallet.getBalance("alice", "BTC");
+        const bobBTC = await wallet.getBalance("bob", "BTC");
+        const bobUSD = await wallet.getBalance("bob", "USD");
 
-        const bobBTC =
-            await wallet.getBalance(
-                "bob",
-                "BTC"
-            );
+        // ✅ Alice's $100 is LOCKED (order resting in book)
+        expect(aliceUSD.available).toBe(0);
+        expect(aliceUSD.locked).toBe(100);
+        expect(aliceBTC.available).toBe(0);
+        expect(aliceBTC.locked).toBe(0);
 
-
-        expect(aliceUSD.available).toBe(100);
-        expect(aliceUSD.locked).toBe(0);
-
-        expect(bobBTC.available).toBe(1);
-        expect(bobBTC.locked).toBe(0);
-
+        // ✅ Bob's 1 BTC is LOCKED (order resting in book)
+        expect(bobBTC.available).toBe(0);
+        expect(bobBTC.locked).toBe(1);
+        expect(bobUSD.available).toBe(0);
+        expect(bobUSD.locked).toBe(0);
 
         // Both orders should still exist
-        expect(
-            orderBookStore.getOrderBook()
-        ).toHaveLength(2);
+        expect(orderBookStore.getOrderBook()).toHaveLength(2);
     });
 
 
@@ -236,7 +204,6 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(sellOrder);
 
-
         // Alice only has $100
         const buyOrder = createOrder(
             2,
@@ -246,19 +213,12 @@ describe("StandardEngine - Trade Integration", () => {
             1
         );
 
-
         await expect(
             engine.processOrder(buyOrder)
         ).rejects.toThrow();
 
-
         // Alice's funds must remain untouched
-        const aliceUSD =
-            await wallet.getBalance(
-                "alice",
-                "USD"
-            );
-
+        const aliceUSD = await wallet.getBalance("alice", "USD");
         expect(aliceUSD.available).toBe(100);
         expect(aliceUSD.locked).toBe(0);
     });
@@ -271,7 +231,6 @@ describe("StandardEngine - Trade Integration", () => {
     it("should reject a SELL order when seller has insufficient BTC", async () => {
 
         // Bob only has 1 BTC
-
         const sellOrder = createOrder(
             1,
             "sell",
@@ -280,19 +239,12 @@ describe("StandardEngine - Trade Integration", () => {
             2
         );
 
-
         await expect(
             engine.processOrder(sellOrder)
         ).rejects.toThrow();
 
-
         // Bob's BTC must remain untouched
-        const bobBTC =
-            await wallet.getBalance(
-                "bob",
-                "BTC"
-            );
-
+        const bobBTC = await wallet.getBalance("bob", "BTC");
         expect(bobBTC.available).toBe(1);
         expect(bobBTC.locked).toBe(0);
     });
@@ -314,7 +266,6 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(sellOrder);
 
-
         const buyOrder = createOrder(
             2,
             "buy",
@@ -325,19 +276,8 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(buyOrder);
 
-
-        const aliceUSD =
-            await wallet.getBalance(
-                "alice",
-                "USD"
-            );
-
-        const bobBTC =
-            await wallet.getBalance(
-                "bob",
-                "BTC"
-            );
-
+        const aliceUSD = await wallet.getBalance("alice", "USD");
+        const bobBTC = await wallet.getBalance("bob", "BTC");
 
         // Locked balances must be consumed
         expect(aliceUSD.locked).toBe(0);
@@ -361,7 +301,6 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(sellOrder);
 
-
         const buyOrder = createOrder(
             2,
             "buy",
@@ -372,20 +311,9 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(buyOrder);
 
-
-        expect(
-            orderBookStore.getOrderBook()
-        ).toHaveLength(0);
-
-
-        expect(
-            await orderBookStore.getOrder(1)
-        ).toBeNull();
-
-
-        expect(
-            await orderBookStore.getOrder(2)
-        ).toBeNull();
+        expect(orderBookStore.getOrderBook()).toHaveLength(0);
+        expect(await orderBookStore.getOrder(1)).toBeNull();
+        expect(await orderBookStore.getOrder(2)).toBeNull();
     });
 
 
@@ -395,10 +323,10 @@ describe("StandardEngine - Trade Integration", () => {
 
     it("should partially fill a resting SELL order", async () => {
 
-        // ✅ Give Bob enough BTC for the full sell order
+        // Give Bob enough BTC for the full sell order
         await wallet.deposit("bob", "BTC", 4); // Bob now has 5 BTC total
 
-        // ✅ Give Alice enough USD for the buy order
+        // Give Alice enough USD for the buy order
         await wallet.deposit("alice", "USD", 400); // Alice now has 500 USD total
 
         // Bob wants to sell 5 BTC
@@ -412,7 +340,6 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(sellOrder);
 
-
         // Alice buys 2 BTC (needs $200)
         const buyOrder = createOrder(
             2,
@@ -424,27 +351,17 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(buyOrder);
 
-
         // ----------------------------------------------------
         // Bob should have 3 BTC remaining on the order book
         // ----------------------------------------------------
 
-        const remainingSell =
-            await orderBookStore.getOrder(1);
-
+        const remainingSell = await orderBookStore.getOrder(1);
         expect(remainingSell).not.toBeNull();
         expect(remainingSell?.quantity).toBe(3);
 
-
-        // ----------------------------------------------------
         // Alice's order was completely filled
-        // ----------------------------------------------------
-
-        const remainingBuy =
-            await orderBookStore.getOrder(2);
-
+        const remainingBuy = await orderBookStore.getOrder(2);
         expect(remainingBuy).toBeNull();
-
 
         // ----------------------------------------------------
         // Check balances
@@ -459,9 +376,9 @@ describe("StandardEngine - Trade Integration", () => {
         expect(aliceUSD.available).toBe(300);
         expect(aliceBTC.available).toBe(2); // Alice got 2 BTC
         
-        // Bob sold 2 BTC, has 3 BTC remaining locked
-        expect(bobBTC.available).toBe(3);
-        expect(bobBTC.locked).toBe(3); // Remaining 3 BTC still locked
+        // Bob sold 2 BTC, has 3 BTC still locked in the order
+        expect(bobBTC.available).toBe(0); // All remaining BTC are locked
+        expect(bobBTC.locked).toBe(3); // 3 BTC still locked in order
         
         expect(bobUSD.available).toBe(200); // Bob got $200
         expect(bobUSD.locked).toBe(0);
@@ -474,7 +391,7 @@ describe("StandardEngine - Trade Integration", () => {
 
     it("should partially fill the incoming BUY order", async () => {
 
-        // ✅ Give Bob enough BTC
+        // Give Bob enough BTC
         await wallet.deposit("bob", "BTC", 2); // Bob now has 3 BTC total
 
         // Bob sells 2 BTC
@@ -488,8 +405,7 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(sellOrder);
 
-
-        // ✅ Give Alice enough USD for the full order
+        // Give Alice enough USD for the full order
         await wallet.deposit("alice", "USD", 500); // Alice now has 600 USD total
 
         // Alice wants to buy 5 BTC (needs $500)
@@ -503,23 +419,11 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(buyOrder);
 
-
-        // ----------------------------------------------------
         // Bob's SELL should be completely filled
-        // ----------------------------------------------------
+        expect(await orderBookStore.getOrder(1)).toBeNull();
 
-        expect(
-            await orderBookStore.getOrder(1)
-        ).toBeNull();
-
-
-        // ----------------------------------------------------
         // Alice should have 3 BTC remaining on her BUY order
-        // ----------------------------------------------------
-
-        const remainingBuy =
-            await orderBookStore.getOrder(2);
-
+        const remainingBuy = await orderBookStore.getOrder(2);
         expect(remainingBuy).not.toBeNull();
         expect(remainingBuy?.quantity).toBe(3);
     });
@@ -531,10 +435,10 @@ describe("StandardEngine - Trade Integration", () => {
 
     it("should correctly update remaining order quantity", async () => {
 
-        // ✅ Give Bob enough BTC
+        // Give Bob enough BTC
         await wallet.deposit("bob", "BTC", 4); // Bob now has 5 BTC total
 
-        // ✅ Give Alice enough USD
+        // Give Alice enough USD
         await wallet.deposit("alice", "USD", 400); // Alice now has 500 USD total
 
         const sellOrder = createOrder(
@@ -546,7 +450,6 @@ describe("StandardEngine - Trade Integration", () => {
         );
 
         await engine.processOrder(sellOrder);
-
 
         const buyOrder = createOrder(
             2,
@@ -558,10 +461,7 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(buyOrder);
 
-
-        const order =
-            await orderBookStore.getOrder(1);
-
+        const order = await orderBookStore.getOrder(1);
         expect(order).not.toBeNull();
         expect(order?.quantity).toBe(3);
     });
@@ -573,10 +473,10 @@ describe("StandardEngine - Trade Integration", () => {
 
     it("should correctly settle balances after a partial trade", async () => {
 
-        // ✅ Give Bob enough BTC
+        // Give Bob enough BTC
         await wallet.deposit("bob", "BTC", 4); // Bob now has 5 BTC total
 
-        // ✅ Give Alice enough USD
+        // Give Alice enough USD
         await wallet.deposit("alice", "USD", 400); // Alice now has 500 USD total
 
         const sellOrder = createOrder(
@@ -588,7 +488,6 @@ describe("StandardEngine - Trade Integration", () => {
         );
 
         await engine.processOrder(sellOrder);
-
 
         // Alice buys 2 BTC (costs $200)
         const buyOrder = createOrder(
@@ -601,23 +500,12 @@ describe("StandardEngine - Trade Integration", () => {
 
         await engine.processOrder(buyOrder);
 
-
         // ----------------------------------------------------
         // Alice
         // ----------------------------------------------------
 
-        const aliceUSD =
-            await wallet.getBalance(
-                "alice",
-                "USD"
-            );
-
-        const aliceBTC =
-            await wallet.getBalance(
-                "alice",
-                "BTC"
-            );
-
+        const aliceUSD = await wallet.getBalance("alice", "USD");
+        const aliceBTC = await wallet.getBalance("alice", "BTC");
 
         // Alice started with $500, spent $200 = $300 remaining
         expect(aliceUSD.available).toBe(300);
@@ -627,26 +515,15 @@ describe("StandardEngine - Trade Integration", () => {
         expect(aliceBTC.available).toBe(2);
         expect(aliceBTC.locked).toBe(0);
 
-
         // ----------------------------------------------------
         // Bob
         // ----------------------------------------------------
 
-        const bobBTC =
-            await wallet.getBalance(
-                "bob",
-                "BTC"
-            );
+        const bobBTC = await wallet.getBalance("bob", "BTC");
+        const bobUSD = await wallet.getBalance("bob", "USD");
 
-        const bobUSD =
-            await wallet.getBalance(
-                "bob",
-                "USD"
-            );
-
-
-        // Bob started with 5 BTC, sold 2, has 3 BTC locked (for remaining order)
-        expect(bobBTC.available).toBe(3);
+        // Bob sold 2 BTC, has 3 BTC still locked in the order
+        expect(bobBTC.available).toBe(0); // All remaining BTC are locked
         expect(bobBTC.locked).toBe(3); // Still locked for remaining 3 BTC
 
         // Bob got $200 from the sale
@@ -681,20 +558,11 @@ describe("InMemoryOrderBookStore - updateOrder", () => {
 
         await store.placeOrder(order);
 
-
-        const updated =
-            await store.updateOrder(
-                1,
-                3
-            );
-
+        const updated = await store.updateOrder(1, 3);
 
         expect(updated.quantity).toBe(3);
 
-
-        const stored =
-            await store.getOrder(1);
-
+        const stored = await store.getOrder(1);
         expect(stored?.quantity).toBe(3);
     });
 
@@ -711,21 +579,10 @@ describe("InMemoryOrderBookStore - updateOrder", () => {
 
         await store.placeOrder(order);
 
+        await store.updateOrder(1, 0);
 
-        await store.updateOrder(
-            1,
-            0
-        );
-
-
-        expect(
-            await store.getOrder(1)
-        ).toBeNull();
-
-
-        expect(
-            store.getOrderBook()
-        ).toHaveLength(0);
+        expect(await store.getOrder(1)).toBeNull();
+        expect(store.getOrderBook()).toHaveLength(0);
     });
 
 
@@ -741,12 +598,9 @@ describe("InMemoryOrderBookStore - updateOrder", () => {
 
         await store.placeOrder(order);
 
-
         await expect(
             store.updateOrder(1, -1)
-        ).rejects.toThrow(
-            "Quantity cannot be negative"
-        );
+        ).rejects.toThrow("Quantity cannot be negative");
     });
 
 
@@ -754,8 +608,6 @@ describe("InMemoryOrderBookStore - updateOrder", () => {
 
         await expect(
             store.updateOrder(999, 2)
-        ).rejects.toThrow(
-            "Order 999 not found"
-        );
+        ).rejects.toThrow("Order 999 not found");
     });
 });
