@@ -4,15 +4,19 @@ import type { OrderService } from '../service/order-service';
 import type { CreateOrderRequestDTO } from '../dto/requestorderDTO';
 
 export class OrderController {
-    constructor(private orderService: OrderService) {}
-    
+    constructor(private orderService: OrderService) { }
+
     async placeOrder(request: Request): Promise<Response> {
         try {
             // 1. Parse request
-            const body = await request.json();
-            
+            const body = (await request.json()) as Record<string, any>;
+            if (!body || typeof body !== 'object') {
+                return this.errorResponse('Invalid request body');
+            }
+
             // 2. Create DTO
             const dto: CreateOrderRequestDTO = {
+                orderId:Date.now(),
                 userId: body.userId,
                 symbol: body.symbol,
                 side: body.side,
@@ -20,21 +24,48 @@ export class OrderController {
                 quantity: Number(body.quantity), // ← Parse to number
                 type: body.type || 'LIMIT'
             };
-            
+
             // 3. Basic validation (controller's job)
             this.validateRequest(dto);
-            
+
             // 4. Call service
             const result = await this.orderService.createOrder(dto);
-            
+
             // 5. Return response
             return this.successResponse(result, 201);
-            
+
         } catch (error) {
             return this.errorResponse(error);
         }
     }
-    
+
+    async cancelOrder(request: Request): Promise<Response> {
+        try {
+            const body = (await request.json()) as Record<string, any>;
+            if (!body || typeof body !== 'object') {
+                return this.errorResponse('Invalid request body');
+            }
+
+            // 2. Create DTO
+            const dto: CreateOrderRequestDTO = {
+                orderId:body.orderId,
+                userId: body.userId,
+                symbol: body.symbol,
+                side: body.side,
+                price: Number(body.price),    // ← Parse to number
+                quantity: Number(body.quantity), // ← Parse to number
+                type: body.type || 'LIMIT'
+            };
+
+            // 3. Basic validation (controller's job)
+            this.validateRequest(dto);
+            await this.orderService.cancelOrder(dto);
+            return this.successResponse("Order deleted successfully", 201);
+        } catch (e) {
+            return this.errorResponse(`Internal Error while deleting the order: ${e}`)
+        }
+    }
+
     private validateRequest(dto: CreateOrderRequestDTO): void {
         if (!dto.userId) {
             throw new Error('User ID is required');
@@ -52,7 +83,7 @@ export class OrderController {
             throw new Error('Side must be "buy" or "sell"');
         }
     }
-    
+
     private successResponse(data: any, status: number = 200): Response {
         return new Response(
             JSON.stringify(data),
@@ -62,11 +93,11 @@ export class OrderController {
             }
         );
     }
-    
+
     private errorResponse(error: any): Response {
         const status = error.message.includes('required') ? 400 : 500;
         return new Response(
-            JSON.stringify({ 
+            JSON.stringify({
                 error: error.message || 'Internal server error'
             }),
             {

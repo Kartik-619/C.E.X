@@ -41,4 +41,28 @@ async createOrder(orderDTO:CreateOrderRequestDTO){
     return responseDTO; 
 
 }
+
+async cancelOrder(orderDTO:CreateOrderRequestDTO){
+    if(orderDTO.price<=0 || orderDTO.quantity<=0){
+        throw new Error("price and quantity must be more than 1");
+    }
+    if(!orderDTO.userId){
+        throw new Error("Undefined user")
+    }
+
+   // 2. Convert DTO to Domain Object expected by the Engine 
+    const domainOrder:EngineOrder={
+        orderId:orderDTO.orderId,
+        userId:orderDTO.userId,
+        symbol:orderDTO.symbol,
+        price:orderDTO.price,
+        side:orderDTO.side,
+        type:orderDTO.type,
+        quantity:orderDTO.quantity,
+        createdAt:Date.now()
+    };
+
+    //cancel order 
+    this.engine.cancelOrder(domainOrder.orderId);
+}
 }

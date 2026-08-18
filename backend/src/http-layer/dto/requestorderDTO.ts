@@ -3,6 +3,7 @@
 // This is a plain object - just data, no behavior!
 export class CreateOrderRequestDTO {
     // Required fields
+    orderId!:number;
     userId: string | undefined;
     symbol!: string;
     side!: 'buy' | 'sell';
