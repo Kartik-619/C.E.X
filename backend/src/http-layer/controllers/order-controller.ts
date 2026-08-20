@@ -29,13 +29,40 @@ export class OrderController {
             this.validateRequest(dto);
 
             // 4. Call service
-            const result = await this.orderService.createOrder(dto);
+            const result = await this.orderService.placeOrder(dto);
 
             // 5. Return response
             return this.successResponse(result, 201);
 
         } catch (error) {
             return this.errorResponse(error);
+        }
+    }
+
+    async addOrder(request: Request): Promise<Response> {
+        try {
+            const body = (await request.json()) as Record<string, any>;
+            if (!body || typeof body !== 'object') {
+                return this.errorResponse('Invalid request body');
+            }
+
+            // 2. Create DTO
+            const dto: CreateOrderRequestDTO = {
+                orderId:body.orderId,
+                userId: body.userId,
+                symbol: body.symbol,
+                side: body.side,
+                price: Number(body.price),    // ← Parse to number
+                quantity: Number(body.quantity), // ← Parse to number
+                type: body.type || 'LIMIT'
+            };
+
+            // 3. Basic validation (controller's job)
+            this.validateRequest(dto);
+            await this.orderService.addOrder(dto);
+            return this.successResponse("Order added successfully", 201);
+        } catch (e) {
+            return this.errorResponse(`Internal Error while adding the order: ${e}`)
         }
     }
 
@@ -59,7 +86,10 @@ export class OrderController {
 
             // 3. Basic validation (controller's job)
             this.validateRequest(dto);
-            await this.orderService.cancelOrder(dto);
+            if(!dto.userId){
+                throw new Error("UserID invalid")
+            }
+            await this.orderService.cancelOrder(dto.orderId,dto.userId);
             return this.successResponse("Order deleted successfully", 201);
         } catch (e) {
             return this.errorResponse(`Internal Error while deleting the order: ${e}`)
