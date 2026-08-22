@@ -9,9 +9,9 @@ import { Inmemory_WalletStore } from '../store/wallet-store';
 import { OrderService } from './service/order-service';
 import { OrderController } from './controllers/order-controller';
 import { Routes } from './routes/index';
-
+import type { AppRouter } from './routes/route.interface';
+import { seedDatabase } from '../api/seed/seed';
 // 1. Infrastructure Layer
-
 const orderBookStore = new inmemory_OrderBookStore();
 const walletStore = new Inmemory_WalletStore();
 const orderBook = new OrderBook(orderBookStore);
@@ -19,19 +19,34 @@ const wallet = new Wallet(walletStore);
 const engine = new StandardEngine(orderBook, wallet);
 
 // 2. Service Layer
-
 const orderService = new OrderService(engine);
 
 // 3. Controller Layer
-
 const orderController = new OrderController(orderService);
 
 // 4. Routes
-
 const routes = new Routes(orderController);
 
-// 5. Server
+// 5. Create router adapter
+const router: AppRouter = {
+    get: (path, handler) => {
+        console.log(`📌 GET ${path}`);
+    },
+    post: (path, handler) => {
+        console.log(`📌 POST ${path}`);
+    },
+    delete: (path, handler) => {
+        console.log(`📌 DELETE ${path}`);
+    },
+};
 
+// 6. Register routes
+routes.register(router);
+
+// ✅ 7. Seed the database with test users
+await seedDatabase(walletStore);
+
+// 8. Server with manual routing
 const server = serve({
     port: 3000,
     fetch(request: Request) {
@@ -39,7 +54,6 @@ const server = serve({
         const method = request.method;
         const path = url.pathname;
 
-        // CORS headers (optional but recommended)
         const headers = {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
@@ -47,12 +61,10 @@ const server = serve({
             'Access-Control-Allow-Headers': 'Content-Type',
         };
 
-        // Handle preflight OPTIONS request
         if (method === 'OPTIONS') {
             return new Response(null, { headers });
         }
 
-        // Route mapping (manual routing)
         try {
             // Health check
             if (path === '/api/health' && method === 'GET') {
@@ -67,9 +79,19 @@ const server = serve({
                 return orderController.placeOrder(request);
             }
 
+            // Add order: POST /api/orders/add
+            if (path === '/api/orders/add' && method === 'POST') {
+                return orderController.addOrder(request);
+            }
+
             // Cancel order: DELETE /api/orders
             if (path === '/api/orders' && method === 'DELETE') {
                 return orderController.cancelOrder(request);
+            }
+
+            // GET /api/balance/:userId - Get balance
+            if (path.startsWith('/api/balance/') && method === 'GET') {
+                return orderController.getBalance(request);
             }
 
             // 404 Not Found
@@ -79,7 +101,6 @@ const server = serve({
             );
 
         } catch (error: any) {
-            // Global error handler
             return new Response(
                 JSON.stringify({ 
                     error: 'Internal server error',
@@ -93,6 +114,8 @@ const server = serve({
 
 console.log(`🚀 Server running on http://localhost:${server.port}`);
 console.log(`📋 Endpoints:`);
-console.log(`   POST   /api/orders  - Place an order`);
-console.log(`   DELETE /api/orders  - Cancel an order`);
-console.log(`   GET    /api/health  - Health check`);
+console.log(`   POST   /api/orders        - Place an order`);
+console.log(`   POST   /api/orders/add   - Add order to book`);
+console.log(`   DELETE /api/orders        - Cancel an order`);
+console.log(`   GET    /api/balance/:userId - Get balance`);
+console.log(`   GET    /api/health        - Health check`);

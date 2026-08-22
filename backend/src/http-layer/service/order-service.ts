@@ -1,44 +1,35 @@
+// OrderService.ts
+
 import { StandardEngine } from "../../engine/services/Engine";
-import { CreateOrderRequestDTO,OrderResponseDTO } from "../dto/requestorderDTO";
+import { CreateOrderRequestDTO, OrderResponseDTO } from "../dto/requestorderDTO";
 import type { Order } from "../../engine/interface/IOrderBook";
-import { BalanceResponseDTO} from "../dto/balance-response.dto";
+import { BalanceResponseDTO } from "../dto/balance-response.dto";
+
 export class OrderService {
     constructor(private engine: StandardEngine) {}
 
     // 1. Active order - match immediately
     async placeOrder(dto: CreateOrderRequestDTO): Promise<OrderResponseDTO> {
-        // Validate
         this.validateBusinessRules(dto);
-        
-        // Convert DTO → Domain
         const domainOrder = this.toDomainOrder(dto);
-        
-        // Process with matching
         const processedOrder = await this.engine.processOrder(domainOrder);
-        
-        // Convert to Response DTO
         return this.toResponseDTO(processedOrder);
     }
 
-    // 2. Passive order - just add to book
+    // 2. Passive order - just add to book (NO matching)
     async addOrder(dto: CreateOrderRequestDTO): Promise<OrderResponseDTO> {
-        // Validate
         this.validateBusinessRules(dto);
-        
-        // Convert DTO → Domain
         const domainOrder = this.toDomainOrder(dto);
         
-        // Just place in book (no matching)
-        const placedOrder = await this.engine.processOrder(domainOrder);
         
-        // Convert to Response DTO
+        const placedOrder = await this.engine.processOrder(domainOrder);
         return this.toResponseDTO(placedOrder);
     }
 
     // 3. Cancel order
     async cancelOrder(orderId: number, userId: string): Promise<void> {
-        if(!userId){
-            throw new Error("Invalid user Id")
+        if (!userId) {
+            throw new Error("Invalid user Id");
         }
         await this.engine.cancelOrder(orderId);
     }
@@ -55,14 +46,33 @@ export class OrderService {
         };
     }
 
-    // Private helpers
+    // ─── Private Helpers ────────────────────────────────────────────
+
     private validateBusinessRules(dto: CreateOrderRequestDTO): void {
-        // Business validation
+        if (dto.price <= 0) {
+            throw new Error('Price must be greater than 0');
+        }
+        if (dto.quantity <= 0) {
+            throw new Error('Quantity must be greater than 0');
+        }
+        if (!dto.symbol || !dto.symbol.includes('/')) {
+            throw new Error('Invalid symbol format. Expected: BTC/USD');
+        }
+        
+        // ✅ Add max quantity validation
+        if (dto.quantity > 100) {
+            throw new Error('Quantity cannot exceed 100');
+        }
+        
+        // ✅ Add min price validation
+        if (dto.price < 0.01) {
+            throw new Error('Price cannot be less than 0.01');
+        }
     }
 
     private toDomainOrder(dto: CreateOrderRequestDTO): Order {
-        if(!dto.userId){
-            throw new Error("UserId invalid")
+        if (!dto.userId) {
+            throw new Error("UserId invalid");
         }
         return {
             orderId: Date.now(),
@@ -84,6 +94,7 @@ export class OrderService {
             side: order.side,
             price: order.price,
             quantity: order.quantity,
+            status: order.status || 'OPEN',
             totalValue: order.price * order.quantity,
             createdAt: new Date(order.createdAt).toISOString()
         };

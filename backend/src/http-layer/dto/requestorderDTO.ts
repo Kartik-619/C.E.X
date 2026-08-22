@@ -1,28 +1,27 @@
-// src/api/dto/request/CreateOrderRequestDTO.ts
+// src/http-layer/dto/requestorderDTO.ts
 
-// This is a plain object - just data, no behavior!
 export class CreateOrderRequestDTO {
-    // Required fields
-    orderId!:number;
-    userId: string | undefined;
+    userId!: string;
     symbol!: string;
     side!: 'buy' | 'sell';
     price!: number;
     quantity!: number;
-    
-    // Optional field with default
     type: 'LIMIT' | 'MARKET' = 'LIMIT';
 }
 
-// src/api/dto/response/OrderResponseDTO.ts
+export class CancelOrderRequestDTO {
+    orderId!: number;
+    userId!: string;
+}
+
 export class OrderResponseDTO {
     id!: number;
     userId!: string;
     symbol!: string;
     side!: string;
     price!: number;
-    //add status
     quantity!: number;
+    status!: string;
     totalValue!: number;
     createdAt!: string;
 }
