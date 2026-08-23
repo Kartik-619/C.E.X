@@ -6,20 +6,17 @@ import type { Order } from "../interface/IOrderBook";
 import type { Wallet } from "./wallet/wallet";
 import type { ITrade } from "../interface/ITrade";
 
-// ✅ 1. Import your Logger components (Adjust the relative path to match your project structure)
 import { LoggerFactory } from "../../../infra/logging/logger.factory"; 
 import { LogLevel } from "../../../infra/logging/log-level";
 import { Logger } from "../../../infra/logging/logger";
 
 export class StandardEngine extends AbstractEngine<Order> {
     
-    // ✅ 2. Declare the logger instance
     private readonly logger: Logger;
 
     constructor(orderBook: OrderBook, wallet: Wallet) {
         super(orderBook, wallet);
         
-        // ✅ 3. Initialize the logger (e.g., 'console' for dev, 'file' for prod)
         // You can also read this from an environment variable or config
         this.logger = LoggerFactory.createLogger('console', LogLevel.INFO);
     }

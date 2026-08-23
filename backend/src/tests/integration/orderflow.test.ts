@@ -100,7 +100,7 @@ describe('Order Flow Integration', () => {
 
             expect(buyResponse.status).toBe(201);
             expect(buyData).toHaveProperty('id');
-            
+
             // 3. Verify balances
             const aliceBalance = await engine.getBalance('alice', 'USD');
             const bobBalance = await engine.getBalance('bob', 'BTC');
@@ -163,7 +163,7 @@ describe('Order Flow Integration', () => {
 
             const cancelResponse = await controller.cancelOrder(cancelRequest);
             const cancelData = await parseResponse<SuccessResponse>(cancelResponse);
-            
+
             // ✅ FIX: Expect status 200 (not 201)
             expect(cancelResponse.status).toBe(200);
             expect(cancelData.message).toBe('Order cancelled successfully');
@@ -176,6 +176,8 @@ describe('Order Flow Integration', () => {
             const aliceBalance = await engine.getBalance('alice', 'USD');
             expect(aliceBalance.available).toBe(1000);
         });
+
+        // In OrderFlow.test.ts
 
         it('should handle insufficient funds correctly', async () => {
             const request = new Request('http://localhost/api/orders', {
@@ -193,7 +195,7 @@ describe('Order Flow Integration', () => {
             const response = await controller.placeOrder(request);
             const data = await parseResponse<ErrorResponse>(response);
 
-            expect(response.status).toBe(500);
+    expect(response.status).toBe(500);
             expect(data.error).toBeDefined();
         });
     });
@@ -245,7 +247,7 @@ describe('Order Flow Integration', () => {
             // The $101 sell order remains
             const orderBook = orderBookStore.getOrderBook();
             expect(orderBook.length).toBe(1);
-            
+
             // ✅ FIX: Check that orderBook[0] exists before accessing price
             const remainingOrder = orderBook[0];
             expect(remainingOrder).toBeDefined();

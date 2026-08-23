@@ -3,18 +3,15 @@
 import type { OrderService } from '../service/order-service';
 import type { CreateOrderRequestDTO, CancelOrderRequestDTO } from '../dto/requestorderDTO';
 
-// ✅ 1. Import your Logger components (Adjust the relative path to match your project structure)
 import { LoggerFactory } from "../../infra/logging/logger.factory"; 
 import { LogLevel } from "../../infra/logging/log-level";
 import { Logger } from "../../infra/logging/logger";
 
 
 export class OrderController {
-    // ✅ 2. Declare the logger instance
     private readonly logger: Logger;
 
     constructor(private orderService: OrderService) {
-        // ✅ 3. Initialize the logger (e.g., 'console' for dev, 'file' for prod)
         this.logger = LoggerFactory.createLogger('console', LogLevel.INFO);
     }
 
@@ -46,7 +43,7 @@ export class OrderController {
 
         } catch (error: any) {
             this.logger.log(LogLevel.ERROR, `[OrderController] Error in placeOrder: ${error.message}`);
-            return this.errorResponse(error, 400); // Validation errors are typically 400
+            return this.errorResponse(error); // Validation errors are typically 400
         }
     }
 
@@ -113,7 +110,7 @@ export class OrderController {
             
         } catch (error: any) {
             this.logger.log(LogLevel.ERROR, `[OrderController] Error in cancelOrder: ${error.message}`);
-            return this.errorResponse(error, 400); // Or 500 depending on the specific error
+            return this.errorResponse(error); // Or 500 depending on the specific error
         }
     }
 
@@ -132,7 +129,7 @@ export class OrderController {
 
             const balance = await this.orderService.getBalance(userId, asset);
             
-            // ✅ If no balance found, return 404
+            //  If no balance found, return 404
             if (!balance || (balance.available === 0 && balance.locked === 0)) {
                 this.logger.log(LogLevel.WARN, `[OrderController] User not found or zero balance for userId: ${userId}, asset: ${asset}`);
                 return new Response(
@@ -146,7 +143,7 @@ export class OrderController {
             
         } catch (error: any) {
             this.logger.log(LogLevel.ERROR, `[OrderController] Error in getBalance: ${error.message}`);
-            return this.errorResponse(error, 500);
+            return this.errorResponse(error);
         }
     }
 
