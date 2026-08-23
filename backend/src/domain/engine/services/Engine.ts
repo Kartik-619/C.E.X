@@ -6,10 +6,22 @@ import type { Order } from "../interface/IOrderBook";
 import type { Wallet } from "./wallet/wallet";
 import type { ITrade } from "../interface/ITrade";
 
+// ✅ 1. Import your Logger components (Adjust the relative path to match your project structure)
+import { LoggerFactory } from "../../../infra/logging/logger.factory"; 
+import { LogLevel } from "../../../infra/logging/log-level";
+import { Logger } from "../../../infra/logging/logger";
+
 export class StandardEngine extends AbstractEngine<Order> {
+    
+    // ✅ 2. Declare the logger instance
+    private readonly logger: Logger;
 
     constructor(orderBook: OrderBook, wallet: Wallet) {
         super(orderBook, wallet);
+        
+        // ✅ 3. Initialize the logger (e.g., 'console' for dev, 'file' for prod)
+        // You can also read this from an environment variable or config
+        this.logger = LoggerFactory.createLogger('console', LogLevel.INFO);
     }
 
     async createOrder(order: Order): Promise<Order> {
@@ -18,63 +30,59 @@ export class StandardEngine extends AbstractEngine<Order> {
         return await this.orderBook.placeOrder(order);
     }
 
-// In StandardEngine.ts - processOrder()
+    async processOrder(order: Order): Promise<Order> {
+        this.logger.log(LogLevel.INFO, `[Engine] Processing order: ${order.orderId}, quantity: ${order.quantity}`);
 
-async processOrder(order: Order): Promise<Order> {
-    console.log(`[Engine] Processing order: ${order.orderId}, quantity: ${order.quantity}`);
+        await this.validateOrderBalance(order);
+        await this.lockOrderFunds(order);
 
-    await this.validateOrderBalance(order);
-    await this.lockOrderFunds(order);
+        let currentOrder = { ...order };
+        let matchedAny = false;
 
-    let currentOrder = { ...order };
-    let matchedAny = false;
+        while (currentOrder.quantity > 0) {
+            this.logger.log(LogLevel.DEBUG, `[Engine] Looking for match. Current quantity: ${currentOrder.quantity}`);
+            const bestMatch = await this.getBestMatch(currentOrder);
 
-    while (currentOrder.quantity > 0) {
-        console.log(`[Engine] Looking for match. Current quantity: ${currentOrder.quantity}`);
-        const bestMatch = await this.getBestMatch(currentOrder);
+            if (!bestMatch) {
+                this.logger.log(LogLevel.DEBUG, `[Engine] No more matches found`);
+                break;
+            }
 
-        if (!bestMatch) {
-            console.log(`[Engine] No more matches found`);
-            break;
+            matchedAny = true;
+            this.logger.log(LogLevel.INFO, `[Engine] Match found: Order ${bestMatch.orderId} at price ${bestMatch.price}, qty: ${bestMatch.quantity}`);
+
+            const matchedOrder = { ...bestMatch };
+            await this.orderBook.cancelOrder(bestMatch.orderId);
+
+            const trade = this.createTrade(matchedOrder, currentOrder);
+            await this.wallet.settleTrade(trade);
+
+            currentOrder.quantity -= trade.quantity;
+            this.logger.log(LogLevel.DEBUG, `[Engine] Current order remaining: ${currentOrder.quantity}`);
+
+            // ✅ If matched order has remaining, place it back
+            if (matchedOrder.quantity > trade.quantity) {
+                matchedOrder.quantity -= trade.quantity;
+                await this.orderBook.placeOrder(matchedOrder);
+                this.logger.log(LogLevel.INFO, `[Engine] Matched order ${matchedOrder.orderId} has ${matchedOrder.quantity} remaining, placed back`);
+            }
         }
 
-        matchedAny = true;
-        console.log(`[Engine] Match found: Order ${bestMatch.orderId} at price ${bestMatch.price}, qty: ${bestMatch.quantity}`);
-
-        const matchedOrder = { ...bestMatch };
-        await this.orderBook.cancelOrder(bestMatch.orderId);
-
-        const trade = this.createTrade(matchedOrder, currentOrder);
-        await this.wallet.settleTrade(trade);
-
-        currentOrder.quantity -= trade.quantity;
-        console.log(`[Engine] Current order remaining: ${currentOrder.quantity}`);
-
-        // ✅ If matched order has remaining, place it back
-        if (matchedOrder.quantity > trade.quantity) {
-            matchedOrder.quantity -= trade.quantity;
-            await this.orderBook.placeOrder(matchedOrder);
-            console.log(`[Engine] Matched order ${matchedOrder.orderId} has ${matchedOrder.quantity} remaining, placed back`);
+        if (currentOrder.quantity > 0) {
+            await this.orderBook.placeOrder({
+                ...currentOrder,
+                quantity: currentOrder.quantity
+            });
+            this.logger.log(LogLevel.INFO, `[Engine] Order ${order.orderId} partially filled, ${currentOrder.quantity} remaining`);
+        } else if (matchedAny) {
+            this.logger.log(LogLevel.INFO, `[Engine] Order ${order.orderId} fully filled`);
+        } else {
+            this.logger.log(LogLevel.WARN, `[Engine] No matches found for order ${order.orderId}`);
         }
 
-        // ✅ If current order still has quantity, continue the loop
-        // The loop will naturally continue since currentOrder.quantity > 0
+        return currentOrder;
     }
 
-    if (currentOrder.quantity > 0) {
-        await this.orderBook.placeOrder({
-            ...currentOrder,
-            quantity: currentOrder.quantity
-        });
-        console.log(`[Engine] Order ${order.orderId} partially filled, ${currentOrder.quantity} remaining`);
-    } else if (matchedAny) {
-        console.log(`[Engine] Order ${order.orderId} fully filled`);
-    } else {
-        console.log(`[Engine] No matches found for order ${order.orderId}`);
-    }
-
-    return currentOrder;
-}
     private async lockOrderFunds(order: Order): Promise<void> {
         const [baseAsset, quoteAsset] = order.symbol.split("/");
 
@@ -91,7 +99,7 @@ async processOrder(order: Order): Promise<Order> {
     }
 
     async cancelOrder(orderId: number): Promise<void> {
-        console.log(`[Engine] Requesting cancellation for order ${orderId}`);
+        this.logger.log(LogLevel.INFO, `[Engine] Requesting cancellation for order ${orderId}`);
 
         const order = await this.orderBook.getOrder(orderId);
 
@@ -110,6 +118,8 @@ async processOrder(order: Order): Promise<Order> {
 
         await this.wallet.unlockFunds(order.userId, asset, amount);
         await this.orderBook.cancelOrder(orderId);
+        
+        this.logger.log(LogLevel.INFO, `[Engine] Successfully cancelled order ${orderId} and unlocked funds`);
     }
 
     async getBalance(userId: string, asset: string) {
@@ -128,25 +138,22 @@ async processOrder(order: Order): Promise<Order> {
         return this.orderBook.findBestMatch(order);
     }
 
-  // In StandardEngine.ts - getBestMatch()
-private async getBestMatch(order: Order): Promise<Order | null> {
-    if (order.side === "buy") {
-        // ✅ Get the cheapest sell order
-        const bestAsk = this.getBestSell();
-        if (!bestAsk) return null;
-        // ✅ Check if the price is within the buy limit
-        if (bestAsk.price > order.price) return null;
-        // ✅ Check if there's quantity available
-        if (bestAsk.quantity <= 0) return null;
-        return bestAsk;
+    private async getBestMatch(order: Order): Promise<Order | null> {
+        if (order.side === "buy") {
+            const bestAsk = this.getBestSell();
+            if (!bestAsk) return null;
+            if (bestAsk.price > order.price) return null;
+            if (bestAsk.quantity <= 0) return null;
+            return bestAsk;
+        }
+
+        const bestBid = this.getBestBuy();
+        if (!bestBid) return null;
+        if (bestBid.price < order.price) return null;
+        if (bestBid.quantity <= 0) return null;
+        return bestBid;
     }
 
-    const bestBid = this.getBestBuy();
-    if (!bestBid) return null;
-    if (bestBid.price < order.price) return null;
-    if (bestBid.quantity <= 0) return null;
-    return bestBid;
-}
     private async validateOrderBalance(order: Order): Promise<void> {
         const [baseAsset, quoteAsset] = order.symbol.split("/");
 
@@ -159,6 +166,7 @@ private async getBestMatch(order: Order): Promise<Order | null> {
             const balance = await this.wallet.getBalance(order.userId, quoteAsset);
 
             if (balance.available < totalCost) {
+                this.logger.log(LogLevel.WARN, `Insufficient ${quoteAsset} balance for buyer ${order.userId}. Need ${totalCost}, have ${balance.available}`);
                 throw new Error(
                     `Insufficient ${quoteAsset} balance for buyer ${order.userId}. ` +
                     `Need ${totalCost}, have ${balance.available}`
@@ -168,6 +176,7 @@ private async getBestMatch(order: Order): Promise<Order | null> {
             const balance = await this.wallet.getBalance(order.userId, baseAsset);
 
             if (balance.available < order.quantity) {
+                this.logger.log(LogLevel.WARN, `Insufficient ${baseAsset} balance for seller ${order.userId}. Need ${order.quantity}, have ${balance.available}`);
                 throw new Error(
                     `Insufficient ${baseAsset} balance for seller ${order.userId}. ` +
                     `Need ${order.quantity}, have ${balance.available}`
