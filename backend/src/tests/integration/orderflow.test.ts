@@ -1,13 +1,13 @@
 // src/api/tests/integration/OrderFlow.test.ts
 
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { StandardEngine } from '../../../engine/services/Engine';
-import { OrderBook } from '../../../engine/services/orderBook/orderBook';
-import { Wallet } from '../../../engine/services/wallet/wallet';
-import { inmemory_OrderBookStore } from '../../../store/orderbook-store';
-import { Inmemory_WalletStore } from '../../../store/wallet-store';
-import { OrderService } from '../../../http-layer/service/order-service';
-import { OrderController } from '../../../http-layer/controllers/order-controller';
+import { StandardEngine } from '../../domain/engine/services/Engine';
+import { OrderBook } from '../../domain/engine/services/orderBook/orderBook';
+import { Wallet } from '../../domain/engine/services/wallet/wallet';
+import { inmemory_OrderBookStore } from '../../infra/store/orderbook-store';
+import { Inmemory_WalletStore } from '../../infra/store/wallet-store';
+import { OrderService } from '../../http-layer/service/order-service';
+import { OrderController } from '../../http-layer/controllers/order-controller';
 
 // ─── Type Definitions ──────────────────────────────────────────────
 

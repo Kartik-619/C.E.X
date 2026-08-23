@@ -1,8 +1,8 @@
 // OrderService.ts
 
-import { StandardEngine } from "../../engine/services/Engine";
+import { StandardEngine } from "../../domain/engine/services/Engine";
 import { CreateOrderRequestDTO, OrderResponseDTO } from "../dto/requestorderDTO";
-import type { Order } from "../../engine/interface/IOrderBook";
+import type { Order } from "../../domain/engine/interface/IOrderBook";
 import { BalanceResponseDTO } from "../dto/balance-response.dto";
 
 export class OrderService {

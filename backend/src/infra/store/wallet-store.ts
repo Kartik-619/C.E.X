@@ -1,6 +1,6 @@
-import type { Balance } from "../engine/interface/Ibalance";
-import type { IWallet } from "../engine/interface/Iwallet";
-import type { ITrade } from "../engine/interface/ITrade";
+import type { Balance } from "../../domain/engine/interface/Ibalance";
+import type { IWallet } from "../../domain/engine/interface/Iwallet";
+import type { ITrade } from "../../domain/engine/interface/ITrade";
 export class Inmemory_WalletStore implements IWallet<Balance> {
     private balance: Map<string, Map<string, Balance>>
     constructor() {

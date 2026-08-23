@@ -1,9 +1,9 @@
 // src/api/__tests__/unit/OrderService.test.ts
 
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
-import { OrderService } from '../../../http-layer/service/order-service';
-import type { StandardEngine } from '../../../engine/services/Engine';
-import type { CreateOrderRequestDTO } from '../../../http-layer/dto/requestorderDTO';
+import { OrderService } from '../../http-layer/service/order-service';
+import type { StandardEngine } from '../../domain/engine/services/Engine';
+import type { CreateOrderRequestDTO } from '../../http-layer/dto/requestorderDTO';
 
 describe('OrderService', () => {
     let mockEngine: StandardEngine;

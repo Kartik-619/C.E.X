@@ -1,4 +1,4 @@
-import type { Inmemory_WalletStore } from "../../../store/wallet-store";
+import type { Inmemory_WalletStore } from "../../../../infra/store/wallet-store";
 import type { Balance } from "../../interface/Ibalance";
 import type { ITrade } from "../../interface/ITrade";
 import type { IWallet } from "../../interface/Iwallet";

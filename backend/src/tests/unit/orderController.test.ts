@@ -1,9 +1,9 @@
 // src/api/tests/unit/OrderController.test.ts
 
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
-import { OrderController } from '../../../http-layer/controllers/order-controller';
-import type { OrderService } from '../../../http-layer/service/order-service';
-import type { CreateOrderRequestDTO } from '../../../http-layer/dto/requestorderDTO';
+import { OrderController } from '../../http-layer/controllers/order-controller';
+import type { OrderService } from '../../http-layer/service/order-service';
+import type { CreateOrderRequestDTO } from '../../http-layer/dto/requestorderDTO';
 
 // ─── Type Definitions ──────────────────────────────────────────────
 

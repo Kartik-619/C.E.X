@@ -1,6 +1,6 @@
 // src/api/__tests__/fixtures/testData.ts
 
-import type { CreateOrderRequestDTO } from '../../../http-layer/dto/requestorderDTO';
+import type { CreateOrderRequestDTO } from '../../http-layer/dto/requestorderDTO';
 
 export const TestData = {
     orders: {

@@ -5,8 +5,8 @@ import {
     beforeEach,
 } from "bun:test";
 
-import { inmemory_OrderBookStore } from "../../store/orderbook-store";
-import { Inmemory_WalletStore } from "../../store/wallet-store";
+import { inmemory_OrderBookStore } from "../../../infra/store/orderbook-store";
+import { Inmemory_WalletStore } from "../../../infra/store/wallet-store";
 
 import { OrderBook } from "./orderBook/orderBook";
 import { Wallet } from "./wallet/wallet";

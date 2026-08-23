@@ -1,16 +1,16 @@
 // src/api/server.ts
 
 import { serve } from 'bun';
-import { StandardEngine } from '../engine/services/Engine';
-import { OrderBook } from '../engine/services/orderBook/orderBook';
-import { Wallet } from '../engine/services/wallet/wallet';
-import { inmemory_OrderBookStore } from '../store/orderbook-store';
-import { Inmemory_WalletStore } from '../store/wallet-store';
+import { StandardEngine } from '../domain/engine/services/Engine';
+import { OrderBook } from '../domain/engine/services/orderBook/orderBook';
+import { Wallet } from '../domain/engine/services/wallet/wallet';
+import { inmemory_OrderBookStore } from '../infra/store/orderbook-store';
+import { Inmemory_WalletStore } from '../infra/store/wallet-store';
 import { OrderService } from './service/order-service';
 import { OrderController } from './controllers/order-controller';
 import { Routes } from './routes/index';
 import type { AppRouter } from './routes/route.interface';
-import { seedDatabase } from '../api/seed/seed';
+import { seedDatabase } from '../tests/seed/seed';
 // 1. Infrastructure Layer
 const orderBookStore = new inmemory_OrderBookStore();
 const walletStore = new Inmemory_WalletStore();

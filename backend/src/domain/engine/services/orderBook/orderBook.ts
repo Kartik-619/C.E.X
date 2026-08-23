@@ -1,5 +1,5 @@
 import type { Order, IOrderBook } from "../../interface/IOrderBook";
-import type { inmemory_OrderBookStore } from "../../../store/orderbook-store";
+import type { inmemory_OrderBookStore } from "../../../../infra/store/orderbook-store";
 
 export class OrderBook implements IOrderBook {
     private store: inmemory_OrderBookStore;

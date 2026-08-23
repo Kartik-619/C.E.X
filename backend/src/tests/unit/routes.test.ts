@@ -1,11 +1,11 @@
 // src/api/__tests__/unit/routes.test.ts
 
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
-import { Routes } from '../../../http-layer/routes/index';
-import { OrderRoutes } from '../../../http-layer/routes/order.routes';
-import { HealthRoutes } from '../../../http-layer/routes/health.routes';
-import type { AppRouter } from '../../../http-layer/routes/route.interface';
-import type { OrderController } from '../../../http-layer/controllers/order-controller';
+import { Routes } from '../../http-layer/routes/index';
+import { OrderRoutes } from '../../http-layer/routes/order.routes';
+import { HealthRoutes } from '../../http-layer/routes/health.routes';
+import type { AppRouter } from '../../http-layer/routes/route.interface';
+import type { OrderController } from '../../http-layer/controllers/order-controller';
 
 describe('Routes', () => {
     let mockOrderController: OrderController;

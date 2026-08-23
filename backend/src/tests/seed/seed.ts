@@ -1,5 +1,5 @@
 // src/api/seed.ts
-import { Inmemory_WalletStore } from "../../store/wallet-store";
+import { Inmemory_WalletStore } from "../../infra/store/wallet-store";
 
 export async function seedDatabase(walletStore: Inmemory_WalletStore) {
     await walletStore.deposit('alice', 'USD', 1000);
