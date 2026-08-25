@@ -30,7 +30,6 @@ export class OrderService {
     }
 
 
-
     async addOrder(dto: CreateOrderRequestDTO): Promise<OrderResponseDTO> {
         this.logger.log(LogLevel.INFO, `[OrderService] Adding passive order for user: ${dto.userId}, symbol: ${dto.symbol}`);
 
