@@ -1,3 +1,3 @@
 export interface EventListener{
-    update(filename:string):void;
+    update(data:any):void;
 }
