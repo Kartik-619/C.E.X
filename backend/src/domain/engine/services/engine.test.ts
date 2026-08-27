@@ -13,6 +13,7 @@ import { Wallet } from "./wallet/wallet";
 import { StandardEngine } from "./Engine";
 
 import type { Order } from "../interface/IOrderBook";
+import { EventManager } from "../../events/event-bus";
 
 
 // ============================================================
@@ -49,6 +50,7 @@ describe("StandardEngine - Trade Integration", () => {
     let orderBook: OrderBook;
     let wallet: Wallet;
     let engine: StandardEngine;
+    let bus:EventManager;
 
 
     // --------------------------------------------------------
@@ -63,9 +65,12 @@ describe("StandardEngine - Trade Integration", () => {
         walletStore = new Inmemory_WalletStore();
         wallet = new Wallet(walletStore);
 
+        bus= new EventManager()
+
         engine = new StandardEngine(
             orderBook,
-            wallet
+            wallet,
+            bus
         );
 
         // Alice starts with $100

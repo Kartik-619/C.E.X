@@ -40,6 +40,12 @@ export class WebSocketBroadcaster {
         this.bus.subscriber(EventType.ORDER_CANCELLED, {
             update: (data) => this.onOrderCancelled(data)
         });
+        this.bus.subscriber(EventType.ORDER_PENDING,{
+            update:(data)=> this.onOrderPending(data)
+        })
+        this.bus.subscriber(EventType.ORDER_FAILED,{
+            update:(data)=>this.onOrderFailled(data)
+        })
     }
 
     //  event handlers
@@ -61,5 +67,12 @@ export class WebSocketBroadcaster {
     private onOrderCancelled(data: any): void {
         console.log(`[WebSocket] Sending ORDER_CANCELLED to user: ${data.userId}`);
         this.wsServer.sendToUser(data.userId, EventType.ORDER_CANCELLED, data);
+    }
+    private onOrderPending(data:any):void{
+        console.log(`[WebSocket] Sending ORDER_Pending to user: ${data.userId}`);
+        this.wsServer.sendToUser(data.userId,EventType.ORDER_PENDING)
+    }
+    private onOrderFailled(data:any):void{
+        this.wsServer.sendToUser(data.userId,EventType.ORDER_FAILED)
     }
 }
