@@ -8,6 +8,7 @@ import { inmemory_OrderBookStore } from '../../infra/store/orderbook-store';
 import { Inmemory_WalletStore } from '../../infra/store/wallet-store';
 import { OrderService } from '../../http-layer/service/order-service';
 import { OrderController } from '../../http-layer/controllers/order-controller';
+import { EventManager } from '../../domain/events/event-bus';
 
 // ─── Type Definitions ──────────────────────────────────────────────
 
@@ -45,6 +46,7 @@ describe('Order Flow Integration', () => {
     let orderBookStore: inmemory_OrderBookStore;
     let walletStore: Inmemory_WalletStore;
     let engine: StandardEngine;
+    let bus:EventManager;
 
     beforeEach(async () => {
         // Setup real infrastructure
@@ -53,7 +55,8 @@ describe('Order Flow Integration', () => {
 
         const orderBook = new OrderBook(orderBookStore);
         const wallet = new Wallet(walletStore);
-        engine = new StandardEngine(orderBook, wallet);
+        const bus=new EventManager();
+        engine = new StandardEngine(orderBook, wallet,bus);
 
         // Deposit funds
         await walletStore.deposit('alice', 'USD', 1000);

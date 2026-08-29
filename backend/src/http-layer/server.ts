@@ -11,12 +11,14 @@ import { OrderController } from './controllers/order-controller';
 import { Routes } from './routes/index';
 import type { AppRouter } from './routes/route.interface';
 import { seedDatabase } from '../tests/seed/seed';
+import { EventManager } from '../domain/events/event-bus';
 // 1. Infrastructure Layer
 const orderBookStore = new inmemory_OrderBookStore();
 const walletStore = new Inmemory_WalletStore();
 const orderBook = new OrderBook(orderBookStore);
 const wallet = new Wallet(walletStore);
-const engine = new StandardEngine(orderBook, wallet);
+const bus=new EventManager();
+const engine = new StandardEngine(orderBook, wallet,bus);
 
 // 2. Service Layer
 const orderService = new OrderService(engine);
