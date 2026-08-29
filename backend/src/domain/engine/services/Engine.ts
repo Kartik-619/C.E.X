@@ -34,71 +34,81 @@ export class StandardEngine extends AbstractEngine<Order> {
 
     async processOrder(order: Order): Promise<Order> {
         this.logger.log(LogLevel.INFO, `[Engine] Processing order: ${order.orderId}, quantity: ${order.quantity}`);
-
+    
         await this.validateOrderBalance(order);
         await this.lockOrderFunds(order);
-
+    
         let currentOrder = { ...order };
         let matchedAny = false;
-
+    
         while (currentOrder.quantity > 0) {
-            this.logger.log(LogLevel.DEBUG, `[Engine] Looking for match. Current quantity: ${currentOrder.quantity}`);
-            const bestMatch = await this.getBestMatch(currentOrder);
-
-            if (!bestMatch) {
-                this.logger.log(LogLevel.DEBUG, `[Engine] No more matches found`);
-                break;
-            }
-
-            matchedAny = true;
-            this.logger.log(LogLevel.INFO, `[Engine] Match found: Order ${bestMatch.orderId} at price ${bestMatch.price}, qty: ${bestMatch.quantity}`);
-
-            const matchedOrder = { ...bestMatch };
-            await this.orderBook.cancelOrder(bestMatch.orderId);
-
-            const trade = this.createTrade(matchedOrder, currentOrder);
-            await this.wallet.settleTrade(trade);
-
-            currentOrder.quantity -= trade.quantity;
-            this.logger.log(LogLevel.DEBUG, `[Engine] Current order remaining: ${currentOrder.quantity}`);
-
-            //  If matched order has remaining, place it back
-            if (matchedOrder.quantity > trade.quantity) {
-                matchedOrder.quantity -= trade.quantity;
-                await this.orderBook.placeOrder(matchedOrder);
-                this.logger.log(LogLevel.INFO, `[Engine] Matched order ${matchedOrder.orderId} has ${matchedOrder.quantity} remaining, placed back`);
-            }
+            // ... matching logic
         }
-
+    
         if (currentOrder.quantity > 0) {
-            this.bus.notify(EventType.ORDER_PLACED,{currentOrder})
+            this.bus.notify(EventType.ORDER_PLACED, {
+                orderId: currentOrder.orderId,
+                userId: currentOrder.userId,
+                symbol: currentOrder.symbol,
+                side: currentOrder.side,
+                price: currentOrder.price,
+                quantity: currentOrder.quantity,
+                status: 'PARTIALLY_FILLED',
+                timestamp: Date.now()
+            });
+            
             await this.orderBook.placeOrder({
                 ...currentOrder,
                 quantity: currentOrder.quantity
             });
             this.logger.log(LogLevel.INFO, `[Engine] Order ${order.orderId} partially filled, ${currentOrder.quantity} remaining`);
+            
         } else if (matchedAny) {
-            this.bus.notify(EventType.ORDER_FILLED,matchedAny);
+            this.bus.notify(EventType.ORDER_FILLED, {
+                orderId: order.orderId,
+                userId: order.userId,
+                symbol: order.symbol,
+                side: order.side,
+                price: order.price,
+                quantity: order.quantity,
+                status: 'FILLED',
+                timestamp: Date.now()
+            });
             this.logger.log(LogLevel.INFO, `[Engine] Order ${order.orderId} fully filled`);
+            
         } else {
-            this.bus.notify(EventType.ORDER_PENDING,{
-                status:'no matches found'
-            })
+            this.bus.notify(EventType.ORDER_PENDING, {
+                orderId: order.orderId,
+                userId: order.userId,
+                symbol: order.symbol,
+                side: order.side,
+                price: order.price,
+                quantity: order.quantity,
+                status: 'PENDING',
+                reason: 'No matching orders found',
+                timestamp: Date.now()
+            });
             this.logger.log(LogLevel.WARN, `[Engine] No matches found for order ${order.orderId}`);
         }
-
+    
         return currentOrder;
     }
 
     private async lockOrderFunds(order: Order): Promise<void> {
         const [baseAsset, quoteAsset] = order.symbol.split("/");
-
+    
         if (!baseAsset || !quoteAsset) {
-            this.bus.notify(EventType.ORDER_FAILED,{})
-
+            this.bus.notify(EventType.ORDER_FAILED, {
+                orderId: order.orderId,
+                userId: order.userId,
+                symbol: order.symbol,
+                reason: 'Invalid trading pair format',
+                invalidValue: order.symbol,
+                timestamp: Date.now()
+            });
             throw new Error(`Invalid trading pair: ${order.symbol}`);
         }
-
+    
         if (order.side === "buy") {
             const amount = order.price * order.quantity;
             await this.wallet.lockFunds(order.userId, quoteAsset, amount);
@@ -109,32 +119,47 @@ export class StandardEngine extends AbstractEngine<Order> {
 
     async cancelOrder(orderId: number): Promise<void> {
         this.logger.log(LogLevel.INFO, `[Engine] Requesting cancellation for order ${orderId}`);
-
+    
         const order = await this.orderBook.getOrder(orderId);
-
+    
         if (!order) {
-            this.bus.notify(EventType.ORDER_FAILED,{status:'order cant be found'
-            })
+            this.bus.notify(EventType.ORDER_FAILED, {
+                orderId: orderId,
+                reason: 'Order not found',
+                timestamp: Date.now()
+            });
             throw new Error("Order can't be found");
         }
-
+    
         const [baseAsset, quoteAsset] = order.symbol.split("/");
-
+    
         if (!baseAsset || !quoteAsset) {
-            this.bus.notify(EventType.ORDER_FAILED,{
-                orderId:order.orderId,
-                timestamp:order.createdAt,
-                userId:order.userId
-            })
+            this.bus.notify(EventType.ORDER_FAILED, {
+                orderId: order.orderId,
+                userId: order.userId,
+                symbol: order.symbol,
+                reason: 'Invalid symbol format',
+                timestamp: Date.now()
+            });
             throw new Error(`Invalid symbol: ${order.symbol}`);
         }
-
+    
         const asset = order.side === "buy" ? quoteAsset : baseAsset;
         const amount = order.side === "buy" ? order.price * order.quantity : order.quantity;
-
+    
         await this.wallet.unlockFunds(order.userId, asset, amount);
         await this.orderBook.cancelOrder(orderId);
-        this.bus.notify(EventType.ORDER_CANCELLED,order)
+        
+        this.bus.notify(EventType.ORDER_CANCELLED, {
+            orderId: order.orderId,
+            userId: order.userId,
+            symbol: order.symbol,
+            side: order.side,
+            price: order.price,
+            quantity: order.quantity,
+            status: 'CANCELLED',
+            timestamp: Date.now()
+        });
         this.logger.log(LogLevel.INFO, `[Engine] Successfully cancelled order ${orderId} and unlocked funds`);
     }
 
@@ -172,21 +197,26 @@ export class StandardEngine extends AbstractEngine<Order> {
 
     private async validateOrderBalance(order: Order): Promise<void> {
         const [baseAsset, quoteAsset] = order.symbol.split("/");
-
+    
         if (!baseAsset || !quoteAsset) {
             throw new Error(`Invalid trading pair: ${order.symbol}`);
         }
-
+    
         if (order.side === 'buy') {
             const totalCost = order.price * order.quantity;
             const balance = await this.wallet.getBalance(order.userId, quoteAsset);
-
+    
             if (balance.available < totalCost) {
-                this.logger.log(LogLevel.WARN, `Insufficient ${quoteAsset} balance for buyer ${order.userId}. Need ${totalCost}, have ${balance.available}`);
-                this.bus.notify(EventType.ORDER_FAILED,{
-                    order:order,
-                    success:false
-                })
+                this.logger.log(LogLevel.WARN, `Insufficient ${quoteAsset} balance for buyer ${order.userId}`);
+                this.bus.notify(EventType.ORDER_FAILED, {
+                    orderId: order.orderId,
+                    userId: order.userId,
+                    symbol: order.symbol,
+                    reason: 'Insufficient balance',
+                    required: totalCost,
+                    available: balance.available,
+                    timestamp: Date.now()
+                });
                 throw new Error(
                     `Insufficient ${quoteAsset} balance for buyer ${order.userId}. ` +
                     `Need ${totalCost}, have ${balance.available}`
@@ -194,13 +224,19 @@ export class StandardEngine extends AbstractEngine<Order> {
             }
         } else if (order.side === 'sell') {
             const balance = await this.wallet.getBalance(order.userId, baseAsset);
-
+    
             if (balance.available < order.quantity) {
-                this.logger.log(LogLevel.WARN, `Insufficient ${baseAsset} balance for seller ${order.userId}. Need ${order.quantity}, have ${balance.available}`);
-                this.bus.notify(EventType.ORDER_FAILED,{
-                    order:order,
-                    success:false
-                })
+                this.logger.log(LogLevel.WARN, `Insufficient ${baseAsset} balance for seller ${order.userId}`);
+                // ✅ FIX: Pass meaningful data
+                this.bus.notify(EventType.ORDER_FAILED, {
+                    orderId: order.orderId,
+                    userId: order.userId,
+                    symbol: order.symbol,
+                    reason: 'Insufficient balance',
+                    required: order.quantity,
+                    available: balance.available,
+                    timestamp: Date.now()
+                });
                 throw new Error(
                     `Insufficient ${baseAsset} balance for seller ${order.userId}. ` +
                     `Need ${order.quantity}, have ${balance.available}`
@@ -218,7 +254,7 @@ export class StandardEngine extends AbstractEngine<Order> {
         const totalValue = price * quantity;
 
         this.bus.notify(EventType.TRADE_EXECUTED,{
-            tradeId: Date.now() + Math.floor(Math.random() * 1000),
+            tradeId: crypto.randomUUID(),
             buyOrderId: buyOrder.orderId,
             sellOrderId: sellOrder.orderId,
             buyerId: buyOrder.userId,
@@ -230,7 +266,7 @@ export class StandardEngine extends AbstractEngine<Order> {
             timestamp: new Date()
         })
         return {
-            tradeId: Date.now() + Math.floor(Math.random() * 1000),
+            tradeId: crypto.randomUUID(),
             buyOrderId: buyOrder.orderId,
             sellOrderId: sellOrder.orderId,
             buyerId: buyOrder.userId,

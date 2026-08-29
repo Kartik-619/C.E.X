@@ -1,5 +1,5 @@
 export interface ITrade {
-    tradeId: number;
+    tradeId:string;
     buyOrderId: number;
     sellOrderId: number;
 

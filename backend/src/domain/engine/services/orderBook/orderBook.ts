@@ -70,4 +70,12 @@ export class OrderBook implements IOrderBook {
     getBestPrice(side: 'buy' | 'sell'): number | null {
         return this.store.getBestPrice(side);
     }
+
+    // OrderBook.ts
+
+async atomicMatch(order: Order, quantity: number): Promise<Order | null> {
+    console.log("[OrderBook] Atomic matching...");
+    return await this.store.atomicMatch(order, quantity);
+}
+    
 }

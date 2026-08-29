@@ -9,6 +9,7 @@ export interface IOrderBook {
     getBestAsk(): Order | null;
     getOrderBook(): Order[];
     findBestMatch(order: Order): Promise<Order | null>;
+    atomicMatch(order:Order,quantity:number):Promise<Order|null>;
 }
 
 export interface Order{
