@@ -68,6 +68,13 @@ describe('OrderController', () => {
                 available: 1000,
                 locked: 0,
                 total: 1000
+            })),
+            getOrderBook: mock(async () => ({
+                bids: [{ price: 100, quantity: 2 }],
+                asks: [{ price: 101, quantity: 1 }],
+                reducedTotalBidQuantity: 2,
+                reducedTotalAskQuantity: 1,
+                timestamp: new Date().toISOString()
             }))
         } as any;
 
@@ -260,6 +267,26 @@ describe('OrderController', () => {
 
             expect(response.status).toBe(400); // ← Changed from 500
             expect(data.error).toContain('User ID is required');
+        });
+    });
+
+    describe('getOrderBook', () => {
+        it('should return 200 with order book snapshot', async () => {
+            const request = new Request('http://localhost/api/orderbook', {
+                method: 'GET'
+            });
+
+            const response = await controller.getOrderBook(request);
+            const data = await parseResponse<{
+                bids: { price: number; quantity: number }[];
+                asks: { price: number; quantity: number }[];
+                timestamp: string;
+            }>(response);
+
+            expect(response.status).toBe(200);
+            expect(data.bids).toHaveLength(1);
+            expect(data.asks).toHaveLength(1);
+            expect(mockOrderService.getOrderBook).toHaveBeenCalled();
         });
     });
 

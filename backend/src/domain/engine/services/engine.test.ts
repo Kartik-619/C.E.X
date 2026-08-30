@@ -616,3 +616,47 @@ describe("InMemoryOrderBookStore - updateOrder", () => {
         ).rejects.toThrow("Order 999 not found");
     });
 });
+
+
+// ============================================================
+// StandardEngine - getOrderBook
+// ============================================================
+
+describe("StandardEngine - getOrderBook", () => {
+
+    let orderBookStore: inmemory_OrderBookStore;
+    let walletStore: Inmemory_WalletStore;
+    let orderBook: OrderBook;
+    let wallet: Wallet;
+    let engine: StandardEngine;
+    let bus: EventManager;
+
+    beforeEach(async () => {
+        orderBookStore = new inmemory_OrderBookStore();
+        orderBook = new OrderBook(orderBookStore);
+        walletStore = new Inmemory_WalletStore();
+        wallet = new Wallet(walletStore);
+        bus = new EventManager();
+        engine = new StandardEngine(orderBook, wallet, bus);
+
+        await wallet.deposit("alice", "USD", 1000);
+        await wallet.deposit("bob", "BTC", 5);
+    });
+
+    it("should return all resting orders currently in the book", async () => {
+        const sellOrder = createOrder(1, "sell", "bob", 100, 2);
+        await engine.processOrder(sellOrder);
+
+        const buyOrder = createOrder(2, "buy", "alice", 90, 3);
+        await engine.processOrder(buyOrder);
+
+        const book = engine.getOrderBook();
+        expect(book).toHaveLength(2);
+        expect(book.some((order) => order.orderId === 1)).toBe(true);
+        expect(book.some((order) => order.orderId === 2)).toBe(true);
+    });
+
+    it("should return an empty array when no orders are resting", async () => {
+        expect(engine.getOrderBook()).toHaveLength(0);
+    });
+});

@@ -195,6 +195,10 @@ export class StandardEngine extends AbstractEngine<Order> {
         return this.wallet.getBalance(userId, asset);
     }
 
+    getOrderBook(): Order[] {
+        return this.orderBook.getOrderBook();
+    }
+
     getBestBuy(): Order | null {
         return this.orderBook.getBestBid();
     }

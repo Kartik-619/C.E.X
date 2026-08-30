@@ -22,7 +22,12 @@ describe('OrderService', () => {
             getBalance: mock(async (userId: string, asset: string) => ({
                 available: 1000,
                 locked: 0
-            }))
+            })),
+            getOrderBook: mock(() => [
+                { orderId: 1, side: 'buy', price: 100, quantity: 2, userId: 'alice', symbol: 'BTC/USD', type: 'LIMIT', createdAt: 1 },
+                { orderId: 2, side: 'buy', price: 101, quantity: 3, userId: 'alice', symbol: 'BTC/USD', type: 'LIMIT', createdAt: 2 },
+                { orderId: 3, side: 'sell', price: 102, quantity: 1, userId: 'bob', symbol: 'BTC/USD', type: 'LIMIT', createdAt: 3 }
+            ])
         } as any;
 
         orderService = new OrderService(mockEngine);
@@ -166,6 +171,23 @@ it('should add order without matching', async () => {
             expect(result).toHaveProperty('locked');
             expect(result).toHaveProperty('total');
             expect(result.total).toBe(result.available + result.locked);
+        });
+    });
+
+    describe('getOrderBook', () => {
+        it('should return order book snapshot with aggregated bids and asks', async () => {
+            const result = await orderService.getOrderBook();
+
+            expect(mockEngine.getOrderBook).toHaveBeenCalled();
+            expect(result).toHaveProperty('bids');
+            expect(result).toHaveProperty('asks');
+            expect(result).toHaveProperty('reducedTotalBidQuantity');
+            expect(result).toHaveProperty('reducedTotalAskQuantity');
+            expect(result).toHaveProperty('timestamp');
+            expect(result.bids).toHaveLength(2);
+            expect(result.asks).toHaveLength(1);
+            expect(result.reducedTotalBidQuantity).toBe(5);
+            expect(result.reducedTotalAskQuantity).toBe(1);
         });
     });
 });

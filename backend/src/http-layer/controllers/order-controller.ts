@@ -147,6 +147,18 @@ export class OrderController {
         }
     }
 
+    // 5. Get order book
+    async getOrderBook(request: Request): Promise<Response> {
+        this.logger.log(LogLevel.INFO, `[OrderController] Received getOrderBook request`);
+        try {
+            const orderBook = await this.orderService.getOrderBook();
+            return this.successResponse(orderBook);
+        } catch (error: any) {
+            this.logger.log(LogLevel.ERROR, `[OrderController] Error in getOrderBook: ${error.message}`);
+            return this.errorResponse(error);
+        }
+    }
+
     // ─── Validators ────────────────────────────────────────────────
 
     private validateCreateOrder(dto: CreateOrderRequestDTO): void {

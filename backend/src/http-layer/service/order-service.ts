@@ -4,10 +4,13 @@ import { StandardEngine } from "../../domain/engine/services/Engine";
 import { CreateOrderRequestDTO, OrderResponseDTO } from "../dto/requestorderDTO";
 import type { Order } from "../../domain/engine/interface/IOrderBook";
 import { BalanceResponseDTO } from "../dto/balance-response.dto";
+import { OrderBookSnapshotDTO, OrderBookLevelDTO } from "../dto/orderbook-response.dto";
 
 import { LoggerFactory } from "../../infra/logging/logger.factory";
 import { LogLevel } from "../../infra/logging/log-level";
 import { Logger } from "../../infra/logging/logger";
+
+let latestOrderId = Date.now();
 
 export class OrderService {
     private readonly logger: Logger;
@@ -71,6 +74,24 @@ export class OrderService {
         };
     }
 
+    // 5. Get order book snapshot
+    async getOrderBook(): Promise<OrderBookSnapshotDTO> {
+        this.logger.log(LogLevel.INFO, `[OrderService] Fetching order book snapshot`);
+
+        const orders = this.engine.getOrderBook();
+
+        const bids = this.aggregateLevels(orders.filter((order) => order.side === 'buy'));
+        const asks = this.aggregateLevels(orders.filter((order) => order.side === 'sell'));
+
+        return {
+            bids,
+            asks,
+            reducedTotalBidQuantity: bids.reduce((sum, level) => sum + level.quantity, 0),
+            reducedTotalAskQuantity: asks.reduce((sum, level) => sum + level.quantity, 0),
+            timestamp: new Date().toISOString()
+        };
+    }
+
     // ─── Private Helpers ────────────────────────────────────────────
 
     private validateBusinessRules(dto: CreateOrderRequestDTO): void {
@@ -104,7 +125,7 @@ export class OrderService {
             throw new Error("UserId invalid");
         }
         return {
-            orderId: Date.now(),
+            orderId: this.generateOrderId(),
             userId: dto.userId,
             symbol: dto.symbol,
             side: dto.side,
@@ -113,6 +134,16 @@ export class OrderService {
             type: dto.type || 'LIMIT',
             createdAt: Date.now()
         };
+    }
+
+    private generateOrderId(): number {
+        const now = Date.now();
+        if (now > latestOrderId) {
+            latestOrderId = now;
+        } else {
+            latestOrderId += 1;
+        }
+        return latestOrderId;
     }
 
     private toResponseDTO(order: any): OrderResponseDTO {
@@ -127,5 +158,18 @@ export class OrderService {
             totalValue: order.price * order.quantity,
             createdAt: new Date(order.createdAt).toISOString()
         };
+    }
+
+    private aggregateLevels(orders: Order[]): OrderBookLevelDTO[] {
+        const levelMap = new Map<number, number>();
+
+        for (const order of orders) {
+            const current = levelMap.get(order.price) ?? 0;
+            levelMap.set(order.price, current + order.quantity);
+        }
+
+        return Array.from(levelMap.entries())
+            .map(([price, quantity]) => ({ price, quantity }))
+            .sort((a, b) => b.price - a.price);
     }
 }

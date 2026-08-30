@@ -28,7 +28,7 @@ const wallet = new Wallet(walletStore);
 const bus = new EventManager();
 
 // 3. Create WebSocket Server
-const wsServer = new WebsocketServer(3009, logger);
+const wsServer = new WebsocketServer(3001, logger);
 wsServer.start();
 
 // 4. Create WebSocket Broadcaster (connects EventBus → WebSocket)
@@ -67,7 +67,7 @@ await seedDatabase(walletStore);
 
 // 12. Server with manual routing
 const server = serve({
-    port: 3010,
+    port: 3000,
     fetch(request: Request) {
         const url = new URL(request.url);
         const method = request.method;
@@ -113,6 +113,11 @@ const server = serve({
                 return orderController.getBalance(request);
             }
 
+            // GET /api/orderbook - Get order book snapshot
+            if (path === '/api/orderbook' && method === 'GET') {
+                return orderController.getOrderBook(request);
+            }
+
             // 404 Not Found
             return new Response(
                 JSON.stringify({ error: `Route ${method} ${path} not found` }),
@@ -137,5 +142,6 @@ console.log(`   POST   /api/orders        - Place an order`);
 console.log(`   POST   /api/orders/add   - Add order to book`);
 console.log(`   DELETE /api/orders        - Cancel an order`);
 console.log(`   GET    /api/balance/:userId - Get balance`);
+console.log(`   GET    /api/orderbook     - Get order book`);
 console.log(`   GET    /api/health        - Health check`);
 console.log(`🔌 WebSocket running on ws://localhost:3001`);

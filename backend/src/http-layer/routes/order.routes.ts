@@ -26,5 +26,10 @@ export class OrderRoutes implements RouteModule {
         router.get('/api/balance/:userId', (req: Request) => 
             this.orderController.getBalance(req)
         );
+
+        // ✅ GET /api/orderbook - Get order book snapshot
+        router.get('/api/orderbook', (req: Request) => 
+            this.orderController.getOrderBook(req)
+        );
     }
 }
