@@ -4,8 +4,9 @@ const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001";
 
 let websocket: WebSocket | null = null;
 let reconnectTimeout: NodeJS.Timeout | null = null;
-const listeners: Map<WSEventType, ((message: WSMessage) => void)> = new Map();
+const listeners: Map<WSEventType, Set<(message: WSMessage) => void>> = new Map();
 let onConnectionChange: ((connected: boolean) => void) | null = null;
+let onRealtimeMessage: ((message: WSMessage) => void) | null = null;
 
 function notifyConnectionChange(connected: boolean): void {
   onConnectionChange?.(connected);
@@ -15,6 +16,7 @@ export function initWebSocket(
   onMessage: (message: WSMessage) => void,
   onStatusChange?: (connected: boolean) => void
 ): void {
+  onRealtimeMessage = onMessage;
   if (onStatusChange) {
     onConnectionChange = onStatusChange;
   }
@@ -33,7 +35,8 @@ export function initWebSocket(
   websocket.onmessage = (event) => {
     try {
       const message = JSON.parse(event.data) as WSMessage;
-      onMessage(message);
+      onRealtimeMessage?.(message);
+      listeners.get(message.type)?.forEach((listener) => listener(message));
     } catch (error) {
       console.error("Failed to parse WebSocket message:", error);
     }
@@ -56,14 +59,17 @@ function scheduleReconnect(): void {
   }
   reconnectTimeout = setTimeout(() => {
     websocket = null;
-    initWebSocket((message) => {
-      listeners.get(message.type)?.(message);
-    });
+    initWebSocket(onRealtimeMessage ?? (() => {}));
   }, 3000);
 }
 
 export function subscribe(eventType: WSEventType, callback: (message: WSMessage) => void): void {
-  listeners.set(eventType, callback);
+  const existing = listeners.get(eventType);
+  if (existing) {
+    existing.add(callback);
+  } else {
+    listeners.set(eventType, new Set([callback]));
+  }
 }
 
 export function unsubscribe(eventType: WSEventType): void {

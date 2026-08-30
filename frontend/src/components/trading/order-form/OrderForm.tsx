@@ -52,7 +52,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ userId }) => {
     };
 
     const validationError = validateOrderRequest({
-      price: request.price,
+      price: form.orderType === "MARKET" ? 1 : request.price,
       quantity: request.quantity,
       side: request.side,
     });

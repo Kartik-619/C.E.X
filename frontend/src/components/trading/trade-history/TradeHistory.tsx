@@ -1,19 +1,13 @@
 "use client";
 
 import React from "react";
-import type { TradeHistoryEntry } from "@/types/api";
+import { useTradeHistory } from "@/hooks/useTradeHistory";
 import { EmptyState } from "@/components/ui/empty-state/EmptyState";
 import { formatPrice, formatQuantity } from "@/utils/formatters";
 import { Badge } from "@/components/ui/badge/Badge";
 
 export const TradeHistory: React.FC = () => {
-  const [trades] = React.useState<TradeHistoryEntry[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
+  const { trades, loading } = useTradeHistory();
 
   if (loading) {
     return (

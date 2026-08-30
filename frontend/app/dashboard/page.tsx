@@ -7,12 +7,12 @@ import { OrderBook } from "@/components/trading/order-book/OrderBook";
 import { BalanceDisplay } from "@/components/trading/balance-display/BalanceDisplay";
 import { OrderForm } from "@/components/trading/order-form/OrderForm";
 import { TradeHistory } from "@/components/trading/trade-history/TradeHistory";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useWebSocketContext } from "@/context/WebSocketContext";
 
 const USER_ID = "user-1234";
 
 export default function Dashboard() {
-  const { connected } = useWebSocket();
+  const { connected } = useWebSocketContext();
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
   return (
