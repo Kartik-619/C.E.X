@@ -189,6 +189,128 @@ export default function Home() {
         </div>
       </section>
 
+      {/* MARKETS */}
+      <section id="markets" className="border-t border-zinc-200 py-20 dark:border-zinc-800">
+        <div className="mx-auto max-w-6xl px-5 sm:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Markets that never sleep
+            </h2>
+            <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
+              Live prices and 24h performance across leading pairs.
+            </p>
+          </div>
+
+          <div className="mt-16 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+                  <th className="px-5 py-3.5 font-medium">Pair</th>
+                  <th className="px-5 py-3.5 text-right font-medium">Last Price</th>
+                  <th className="hidden px-5 py-3.5 text-right font-medium sm:table-cell">24h Change</th>
+                  <th className="hidden px-5 py-3.5 text-right font-medium md:table-cell">24h Volume</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { pair: "BTC/USD", price: "$48,512.50", change: "+2.41%", up: true, volume: "$1.24B" },
+                  { pair: "ETH/USD", price: "$2,841.30", change: "+1.85%", up: true, volume: "$892M" },
+                  { pair: "SOL/USD", price: "$142.77", change: "-0.62%", up: false, volume: "$412M" },
+                ].map((m) => (
+                  <tr
+                    key={m.pair}
+                    className="border-b border-zinc-100 transition-colors last:border-b-0 hover:bg-zinc-50 dark:border-zinc-800/60 dark:hover:bg-zinc-900"
+                  >
+                    <td className="px-5 py-4 font-medium">{m.pair}</td>
+                    <td className="px-5 py-4 text-right font-semibold">{m.price}</td>
+                    <td
+                      className={`hidden px-5 py-4 text-right font-medium sm:table-cell ${
+                        m.up ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                      }`}
+                    >
+                      {m.change}
+                    </td>
+                    <td className="hidden px-5 py-4 text-right text-zinc-600 dark:text-zinc-400 md:table-cell">{m.volume}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* SECURITY */}
+      <section id="security" className="border-t border-zinc-200 bg-zinc-50 py-20 dark:border-zinc-800 dark:bg-zinc-900/40">
+        <div className="mx-auto max-w-6xl px-5 sm:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Built on security
+            </h2>
+            <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
+              Your funds and data are protected at every layer.
+            </p>
+          </div>
+
+          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                title: "Rotating API Keys",
+                desc: "Every session uses short-lived credentials with full revocation control.",
+                icon: (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="4.5" /><path d="m10.5 12.5 8-8M15 5l4 4" /><path d="M7.5 15.5h.01" /></svg>
+                ),
+              },
+              {
+                title: "Cold Wallet Storage",
+                desc: "A majority of assets are held offline in multi-signature custody.",
+                icon: (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="M12 22V12" /><path d="m3.3 7 8.7 5 8.7-5" /></svg>
+                ),
+              },
+              {
+                title: "Real-time Monitoring",
+                desc: "Anomaly detection and withdrawal safeguards run 24/7.",
+                icon: (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v3m0 12v3M5.2 5.2l2.1 2.1m9.4 9.4 2.1 2.1M3 12h3m12 0h3M5.2 18.8l2.1-2.1m9.4-9.4 2.1-2.1" /><circle cx="12" cy="12" r="3" /></svg>
+                ),
+              },
+              {
+                title: "Encrypted at Rest",
+                desc: "Sensitive data is encrypted with industry-standard algorithms.",
+                icon: (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /><path d="M12 14v3" /></svg>
+                ),
+              },
+              {
+                title: "Audited Matching Engine",
+                desc: "The order engine is continuously tested and independently audited.",
+                icon: (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 3 5.5v5c0 5 3.8 9.5 9 11.5 5.2-2 9-6.5 9-11.5v-5Z" /><path d="m8.5 12 2.5 2.5 4.5-5" /></svg>
+                ),
+              },
+              {
+                title: "Strict Access Control",
+                desc: "Role-based permissions and 2FA gate every privileged action.",
+                icon: (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11h18M3 11l3-6h12l3 6M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" /><path d="M9 17h.01M15 17h.01" /></svg>
+                ),
+              },
+            ].map((s) => (
+              <div
+                key={s.title}
+                className="rounded-xl border border-zinc-200 bg-white p-6 transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50">
+                  {s.icon}
+                </div>
+                <h3 className="mt-5 text-lg font-semibold">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-20">
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
