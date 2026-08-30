@@ -12,24 +12,41 @@ import { Routes } from './routes/index';
 import type { AppRouter } from './routes/route.interface';
 import { seedDatabase } from '../tests/seed/seed';
 import { EventManager } from '../domain/events/event-bus';
-// 1. Infrastructure Layer
+import { WebsocketServer } from '../infra/ws/ws-server';
+import { WebSocketBroadcaster } from '../domain/events/ws-broadcast.orderbook';
+import { LoggerFactory } from '../infra/logging/logger.factory';
+import { LogLevel } from '../infra/logging/log-level';
+
+// 1. Create Logger
+const logger = LoggerFactory.createLogger('console', LogLevel.INFO);
+
+// 2. Infrastructure Layer
 const orderBookStore = new inmemory_OrderBookStore();
 const walletStore = new Inmemory_WalletStore();
 const orderBook = new OrderBook(orderBookStore);
 const wallet = new Wallet(walletStore);
-const bus=new EventManager();
-const engine = new StandardEngine(orderBook, wallet,bus);
+const bus = new EventManager();
 
-// 2. Service Layer
+// 3. Create WebSocket Server
+const wsServer = new WebsocketServer(3001, logger);
+wsServer.start();
+
+// 4. Create WebSocket Broadcaster (connects EventBus → WebSocket)
+const wsBroadcaster = new WebSocketBroadcaster(bus, wsServer);
+
+// 5. Create Engine with EventBus
+const engine = new StandardEngine(orderBook, wallet, bus);
+
+// 6. Service Layer
 const orderService = new OrderService(engine);
 
-// 3. Controller Layer
+// 7. Controller Layer
 const orderController = new OrderController(orderService);
 
-// 4. Routes
+// 8. Routes
 const routes = new Routes(orderController);
 
-// 5. Create router adapter
+// 9. Create router adapter
 const router: AppRouter = {
     get: (path, handler) => {
         console.log(`📌 GET ${path}`);
@@ -42,13 +59,13 @@ const router: AppRouter = {
     },
 };
 
-// 6. Register routes
+// 10. Register routes
 routes.register(router);
 
-// ✅ 7. Seed the database with test users
+// 11. Seed the database with test users
 await seedDatabase(walletStore);
 
-// 8. Server with manual routing
+// 12. Server with manual routing
 const server = serve({
     port: 3000,
     fetch(request: Request) {
@@ -121,3 +138,4 @@ console.log(`   POST   /api/orders/add   - Add order to book`);
 console.log(`   DELETE /api/orders        - Cancel an order`);
 console.log(`   GET    /api/balance/:userId - Get balance`);
 console.log(`   GET    /api/health        - Health check`);
+console.log(`🔌 WebSocket running on ws://localhost:3001`);

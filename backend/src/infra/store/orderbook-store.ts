@@ -105,17 +105,15 @@ export class inmemory_OrderBookStore implements IOrderBook {
 
     async getOrder(orderId: number): Promise<Order | null> {
         const order = this.orders.get(orderId);
-        return order || null; // Fixed: explicitly return null if undefined
+        return order || null; 
     }
     getBestBid(): Order | null {
         const best = this.bids[0];
-        return best ?? null; // ✅ Works: best is Order | undefined, returns Order | null
-    }
+        return best ?? null;   }
 
     getBestAsk(): Order | null {
         const best = this.asks[0];
-        return best ?? null; // ✅ Works: best is Order | undefined, returns Order | null
-    }
+        return best ?? null;    }
 
     getOrderBook(): Order[] {
         return Array.from(this.orders.values());
@@ -158,25 +156,25 @@ export class inmemory_OrderBookStore implements IOrderBook {
     }
 
     async atomicMatch(order: Order, quantity: number): Promise<Order | null> {
-        // 1. Find the best match
+        //  Find the best match
         const bestMatch = order.side === 'buy'
             ? this.getBestAsk()
             : this.getBestBid();
 
         if (!bestMatch) return null;
 
-        // 2. Check price compatibility
+        //  Check price compatibility
         if (order.side === 'buy' && bestMatch.price > order.price) return null;
         if (order.side === 'sell' && bestMatch.price < order.price) return null;
 
-        // 3. Get the actual order from the map (atomic)
+        //  Get the actual order from the map (atomic)
         const matchedOrder = this.orders.get(bestMatch.orderId);
         if (!matchedOrder) return null;
 
-        // 4. Determine trade quantity
+        //  Determine trade quantity
         const tradeQty = Math.min(quantity, matchedOrder.quantity);
 
-        // 5. Update the order IN PLACE (no remove+reinsert)
+        //  Update the order IN PLACE (no remove+reinsert)
         if (matchedOrder.quantity > tradeQty) {
             // Partial fill - update quantity in place
             matchedOrder.quantity -= tradeQty;

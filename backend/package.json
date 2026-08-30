@@ -5,13 +5,15 @@
   "private": true,
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/node": "^26.1.2"
+    "@types/node": "^26.1.2",
+    "@types/ws": "^8.18.1"
   },
   "peerDependencies": {
     "typescript": "^7.0.2"
   },
   "dependencies": {
     "@elysia/cors": "^1.4.2",
-    "elysia": "^1.4.29"
+    "elysia": "^1.4.29",
+    "ws": "^8.21.3"
   }
 }
