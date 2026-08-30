@@ -28,7 +28,7 @@ const wallet = new Wallet(walletStore);
 const bus = new EventManager();
 
 // 3. Create WebSocket Server
-const wsServer = new WebsocketServer(3001, logger);
+const wsServer = new WebsocketServer(3009, logger);
 wsServer.start();
 
 // 4. Create WebSocket Broadcaster (connects EventBus → WebSocket)
@@ -67,7 +67,7 @@ await seedDatabase(walletStore);
 
 // 12. Server with manual routing
 const server = serve({
-    port: 3000,
+    port: 3010,
     fetch(request: Request) {
         const url = new URL(request.url);
         const method = request.method;
