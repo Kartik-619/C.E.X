@@ -4,7 +4,9 @@
   "type": "module",
   "private": true,
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/bun": "latest",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.1.2",
     "@types/ws": "^8.18.1"
   },
@@ -13,7 +15,11 @@
   },
   "dependencies": {
     "@elysia/cors": "^1.4.2",
+    "@elysia/jwt": "^1.4.2",
+    "bcrypt": "^6.0.0",
     "elysia": "^1.4.29",
+    "jsonwebtoken": "^9.0.3",
+    "jwt": "^0.2.0",
     "ws": "^8.21.3"
   }
 }

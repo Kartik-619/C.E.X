@@ -9,7 +9,7 @@ interface BalanceDisplayProps {
   userId?: string;
 }
 
-export const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ userId = "user-1234" }) => {
+export const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ userId = "alice" }) => {
   const { balance, loading, error, refetch } = useBalance(userId);
 
   if (loading) {

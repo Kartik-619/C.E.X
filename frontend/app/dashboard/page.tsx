@@ -8,11 +8,14 @@ import { BalanceDisplay } from "@/components/trading/balance-display/BalanceDisp
 import { OrderForm } from "@/components/trading/order-form/OrderForm";
 import { TradeHistory } from "@/components/trading/trade-history/TradeHistory";
 import { useWebSocketContext } from "@/context/WebSocketContext";
+import { useUser } from "@/context/UserContext";
 
-const USER_ID = "user-1234";
+const DEFAULT_USER_ID = "alice";
 
 export default function Dashboard() {
   const { connected } = useWebSocketContext();
+  const { userId } = useUser();
+  const activeUserId = userId || DEFAULT_USER_ID;
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
   return (
@@ -41,8 +44,8 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
               {/* Left column: balance + order form */}
               <div className="space-y-5 xl:col-span-4">
-                <BalanceDisplay />
-                <OrderForm userId={USER_ID} />
+                <BalanceDisplay userId={activeUserId} />
+                <OrderForm userId={activeUserId} />
               </div>
 
               {/* Right column: order book + trade history */}

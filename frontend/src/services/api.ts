@@ -2,6 +2,12 @@ import type { OrderRequest, OrderResponse, BalanceResponse, OrderBookSnapshot, H
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
+function extractErrorMessage(errorData: Record<string, unknown> | undefined, fallback: string): string {
+  if (!errorData) return fallback;
+  const message = errorData.error ?? errorData.message;
+  return typeof message === "string" && message.length > 0 ? message : fallback;
+}
+
 export async function getBalance(userId: string): Promise<BalanceResponse> {
   const response = await fetch(`${API_BASE_URL}/balance/${userId}`, {
     method: "GET",
@@ -11,8 +17,8 @@ export async function getBalance(userId: string): Promise<BalanceResponse> {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to fetch balance");
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to fetch balance"));
   }
 
   return response.json() as Promise<BalanceResponse>;
@@ -27,8 +33,8 @@ export async function getOrderBook(): Promise<OrderBookSnapshot> {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to fetch order book");
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to fetch order book"));
   }
 
   return response.json() as Promise<OrderBookSnapshot>;
@@ -44,8 +50,8 @@ export async function placeOrder(request: OrderRequest): Promise<OrderResponse> 
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to place order");
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to place order"));
   }
 
   return response.json() as Promise<OrderResponse>;
@@ -61,8 +67,8 @@ export async function addPassiveOrder(request: OrderRequest): Promise<OrderRespo
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to add passive order");
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to add passive order"));
   }
 
   return response.json() as Promise<OrderResponse>;
@@ -78,8 +84,8 @@ export async function cancelOrder(orderId: string): Promise<void> {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to cancel order");
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to cancel order"));
   }
 }
 
@@ -92,8 +98,8 @@ export async function healthCheck(): Promise<HealthResponse> {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Health check failed");
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Health check failed"));
   }
 
   return response.json() as Promise<HealthResponse>;
