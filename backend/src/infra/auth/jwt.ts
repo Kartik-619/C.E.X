@@ -9,10 +9,9 @@ export interface TokenPayload {
 
 export class JWTService {
     private static secret = process.env.JWT_SECRET || 'your-secret-key';
-    private static expiresIn = '7d';
+    private static expiresIn = '7d' as const;
 
     static generate(payload: TokenPayload): string {
-        // ✅ Correct: expiresIn goes in options object
         return jwt.sign(payload, this.secret, { expiresIn: this.expiresIn });
     }
 

@@ -10,7 +10,7 @@ export class Inmemory_User{
         this.userByEmail=new Map<string,User>();
         this.userById=new Map<string,User>();
     }
-    async createUser(username:string,email:string,passwordHash:string):Promise<void>{
+    async createUser(username:string,email:string,passwordHash:string):Promise<User>{
      const user:User={
         id:crypto.randomUUID(),
         username,
@@ -22,6 +22,7 @@ export class Inmemory_User{
         this.users.set(email,user);
         this.userById.set(user.id,user);
         this.userByEmail.set(user.email,user);
+        return user;
     }
 
     async findByEmail(email:string):Promise<User|null>{
