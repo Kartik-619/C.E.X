@@ -1,12 +1,13 @@
 // src/http-layer/service/auth-service.ts
 
 import { Inmemory_User } from '../../infra/store/inmemory-user.store';
+import { Inmemory_WalletStore } from '../../infra/store/wallet-store';
 import { PasswordService } from '../../infra/auth/password';
 import { JWTService } from '../../infra/auth/jwt';
 import type { User } from '../../domain/auth/userI';
 
 export class AuthService {
-    constructor(private userStore: Inmemory_User) {}
+    constructor(private userStore: Inmemory_User, private walletStore: Inmemory_WalletStore) {}
 
     async register(email: string, username: string, password: string) {
         // Check if user exists
@@ -20,6 +21,9 @@ export class AuthService {
 
         // Create user
         const user = await this.userStore.createUser(username, email, passwordHash);
+
+        // Create an empty wallet for the new user so balance queries succeed
+        await this.walletStore.createWallet(user.id);
 
         //  FIX: Use user.id, not 'id'
         const token = JWTService.generate({

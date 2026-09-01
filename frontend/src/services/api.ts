@@ -9,7 +9,7 @@ import type {
   LoginRequest,
 } from "../types/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3010/api";
 const TOKEN_KEY = "cex_auth_token";
 
 // ── Token management ────────────────────────────────────────────────

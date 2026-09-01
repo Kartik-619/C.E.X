@@ -69,6 +69,7 @@ describe('OrderController', () => {
                 locked: 0,
                 total: 1000
             })),
+            hasWallet: mock(async (userId: string) => true),
             getOrderBook: mock(async () => ({
                 bids: [{ price: 100, quantity: 2 }],
                 asks: [{ price: 101, quantity: 1 }],

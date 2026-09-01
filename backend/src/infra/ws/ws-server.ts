@@ -8,7 +8,7 @@ export class WebsocketServer {
     private clients: Map<string, WebSocket> = new Map();
 
     constructor(
-        private port: number = 3001,
+        private port: number = 3011,
         private logger: Logger
     ) {}
 

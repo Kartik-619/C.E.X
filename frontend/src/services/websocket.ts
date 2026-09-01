@@ -1,6 +1,6 @@
 import type { WSMessage, WSEventType, WSOrderPlaced } from "../types/websocket";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001";
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3011";
 
 let websocket: WebSocket | null = null;
 let reconnectTimeout: NodeJS.Timeout | null = null;
@@ -11,6 +11,7 @@ let onRealtimeMessage: ((message: WSMessage) => void) | null = null;
 function notifyConnectionChange(connected: boolean): void {
   onConnectionChange?.(connected);
 }
+
 
 export function initWebSocket(
   onMessage: (message: WSMessage) => void,

@@ -11,6 +11,12 @@ export class Wallet implements  IWallet<Balance>{
     async getBalance(userId: string, asset: string): Promise<Balance> {
       return  this.store.getBalance(userId,asset)
     }
+    async exists(userId: string): Promise<boolean> {
+        return this.store.exists(userId)
+    }
+    async createWallet(userId: string): Promise<void> {
+        return this.store.createWallet(userId)
+    }
     async checkBalance(userId: string, asset: string, amount: number): Promise<boolean> {
         return this.store.checkBalance(userId,asset,amount)
     }

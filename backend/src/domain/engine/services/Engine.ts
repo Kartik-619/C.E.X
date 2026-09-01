@@ -195,6 +195,10 @@ export class StandardEngine extends AbstractEngine<Order> {
         return this.wallet.getBalance(userId, asset);
     }
 
+    async hasWallet(userId: string): Promise<boolean> {
+        return this.wallet.exists(userId);
+    }
+
     getOrderBook(): Order[] {
         return this.orderBook.getOrderBook();
     }

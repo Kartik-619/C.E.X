@@ -7,6 +7,13 @@ export class Inmemory_WalletStore implements IWallet<Balance> {
         this.balance = new Map();
     }
 
+    async exists(userId: string): Promise<boolean> {
+        if (!userId) {
+            throw new Error("Invalid User");
+        }
+        return this.balance.has(userId);
+    }
+
     async getBalance(userId: string, asset: string): Promise<Balance> {
         if (!userId) {
             throw new Error("Invalid User");
@@ -209,6 +216,15 @@ async unlockFunds(userId: string, asset: string, amount: number): Promise<void> 
         sellerQuote.available += tradeValue;
     }
     // Administrative operations
+    async createWallet(userId: string): Promise<void> {
+        if (!userId) {
+            throw new Error("Invalid User");
+        }
+        if (!this.balance.has(userId)) {
+            this.balance.set(userId, new Map<string, Balance>());
+        }
+    }
+
     async deposit(userId: string, asset: string, amount: number): Promise<void> {
         if (!userId) {
             throw new Error("Invalid User");

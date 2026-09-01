@@ -74,6 +74,11 @@ export class OrderService {
         };
     }
 
+    // Check whether a user has a wallet / is a known account
+    async hasWallet(userId: string): Promise<boolean> {
+        return this.engine.hasWallet(userId);
+    }
+
     // 5. Get order book snapshot
     async getOrderBook(): Promise<OrderBookSnapshotDTO> {
         this.logger.log(LogLevel.INFO, `[OrderService] Fetching order book snapshot`);

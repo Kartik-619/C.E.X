@@ -129,9 +129,10 @@ export class OrderController {
 
             const balance = await this.orderService.getBalance(userId, asset);
             
-            //  If no balance found, return 404
-            if (!balance || (balance.available === 0 && balance.locked === 0)) {
-                this.logger.log(LogLevel.WARN, `[OrderController] User not found or zero balance for userId: ${userId}, asset: ${asset}`);
+            //  If the user has no wallet at all, return 404
+            const hasWallet = await this.orderService.hasWallet(userId);
+            if (!balance || !hasWallet) {
+                this.logger.log(LogLevel.WARN, `[OrderController] User not found for userId: ${userId}, asset: ${asset}`);
                 return new Response(
                     JSON.stringify({ error: 'User not found' }),
                     { status: 404, headers: { 'Content-Type': 'application/json' } }
@@ -186,7 +187,7 @@ export class OrderController {
         // Use provided status or determine from message
         const statusCode = status || (message.includes('required') || message.includes('must be') ? 400 : 500);
         
-        // ✅ Log the error response being sent to the client
+        // Log the error response being sent to the client
         this.logger.log(statusCode >= 500 ? LogLevel.ERROR : LogLevel.WARN, `[OrderController] Sending error response: ${message} (Status: ${statusCode})`);
 
         return new Response(

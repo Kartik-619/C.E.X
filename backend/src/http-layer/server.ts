@@ -33,7 +33,7 @@ const wallet = new Wallet(walletStore);
 const bus = new EventManager();
 
 // 3. Create WebSocket Server
-const wsServer = new WebsocketServer(3001, logger);
+const wsServer = new WebsocketServer(3011, logger);
 wsServer.start();
 
 // 4. Create WebSocket Broadcaster (connects EventBus → WebSocket)
@@ -44,7 +44,7 @@ const engine = new StandardEngine(orderBook, wallet, bus);
 
 // 6. Service Layer
 const orderService = new OrderService(engine);
-const authService = new AuthService(userStore);
+const authService = new AuthService(userStore, walletStore);
 
 // 7. Controller Layer
 const orderController = new OrderController(orderService);
@@ -76,12 +76,12 @@ routes.register(router);
 await seedDatabase(walletStore);
 
 // 13. Protected route handler wrapper
-const requireAuth = authMiddleware.createHandler;
+const requireAuth = authMiddleware.createHandler.bind(authMiddleware);
 
 // 14. Server with manual routing
 const server = serve({
-    port: 3000,
-    fetch(request: Request) {
+    port: 3010,
+    async fetch(request: Request) {
         const url = new URL(request.url);
         const method = request.method;
         const path = url.pathname;
@@ -97,59 +97,47 @@ const server = serve({
             return new Response(null, { headers });
         }
 
-        try {
-            // ── Public Routes ────────────────────────────────────
+        const withCorsHeaders = (response: Response): Response => {
+            const responseHeaders = new Headers(response.headers);
+            responseHeaders.set('Access-Control-Allow-Origin', '*');
+            responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+            responseHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            return new Response(response.body, {
+                status: response.status,
+                headers: responseHeaders,
+            });
+        };
 
-            // Health check
+        try {
+            let response: Response;
+
             if (path === '/api/health' && method === 'GET') {
-                return new Response(
+                response = new Response(
                     JSON.stringify({ status: 'healthy' }),
                     { status: 200, headers }
                 );
+            } else if (path === '/api/auth/register' && method === 'POST') {
+                response = await authController.register(request);
+            } else if (path === '/api/auth/login' && method === 'POST') {
+                response = await authController.login(request);
+            } else if (path === '/api/orderbook' && method === 'GET') {
+                response = await orderController.getOrderBook(request);
+            } else if (path === '/api/orders' && method === 'POST') {
+                response = await requireAuth((req) => orderController.placeOrder(req))(request);
+            } else if (path === '/api/orders/add' && method === 'POST') {
+                response = await requireAuth((req) => orderController.addOrder(req))(request);
+            } else if (path === '/api/orders' && method === 'DELETE') {
+                response = await requireAuth((req) => orderController.cancelOrder(req))(request);
+            } else if (path.startsWith('/api/balance/') && method === 'GET') {
+                response = await requireAuth((req) => orderController.getBalance(req))(request);
+            } else {
+                response = new Response(
+                    JSON.stringify({ error: `Route ${method} ${path} not found` }),
+                    { status: 404, headers }
+                );
             }
 
-            // Auth: Register
-            if (path === '/api/auth/register' && method === 'POST') {
-                return authController.register(request);
-            }
-
-            // Auth: Login
-            if (path === '/api/auth/login' && method === 'POST') {
-                return authController.login(request);
-            }
-
-            // Orderbook (public read)
-            if (path === '/api/orderbook' && method === 'GET') {
-                return orderController.getOrderBook(request);
-            }
-
-            // ── Protected Routes (require valid JWT) ─────────────
-
-            // Place order: POST /api/orders
-            if (path === '/api/orders' && method === 'POST') {
-                return requireAuth((req) => orderController.placeOrder(req))(request);
-            }
-
-            // Add order: POST /api/orders/add
-            if (path === '/api/orders/add' && method === 'POST') {
-                return requireAuth((req) => orderController.addOrder(req))(request);
-            }
-
-            // Cancel order: DELETE /api/orders
-            if (path === '/api/orders' && method === 'DELETE') {
-                return requireAuth((req) => orderController.cancelOrder(req))(request);
-            }
-
-            // GET /api/balance/:userId - Get balance
-            if (path.startsWith('/api/balance/') && method === 'GET') {
-                return requireAuth((req) => orderController.getBalance(req))(request);
-            }
-
-            // 404 Not Found
-            return new Response(
-                JSON.stringify({ error: `Route ${method} ${path} not found` }),
-                { status: 404, headers }
-            );
+            return withCorsHeaders(response);
 
         } catch (error: any) {
             return new Response(
@@ -174,3 +162,14 @@ console.log(`   GET    /api/balance/:userId - Get balance (auth)`);
 console.log(`   GET    /api/orderbook       - Get order book`);
 console.log(`   GET    /api/health          - Health check`);
 console.log(`🔌 WebSocket running on ws://localhost:3001`);
+
+// Graceful shutdown — release ports on SIGINT / SIGTERM
+const shutdown = () => {
+    console.log('\n🛑 Shutting down...');
+    wsServer.stop();
+    server.stop();
+    process.exit(0);
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

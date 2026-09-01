@@ -38,7 +38,6 @@ export class AuthController {
             return this.successResponse(result, 201);
 
         } catch (error: any) {
-            this.logger.log(LogLevel.ERROR, `[AuthController] Error in register: ${error.message}`);
             const status = error.message === 'User already exists' ? 409 : 500;
             return this.errorResponse(error.message, status);
         }
@@ -66,7 +65,6 @@ export class AuthController {
             return this.successResponse(result);
 
         } catch (error: any) {
-            this.logger.log(LogLevel.ERROR, `[AuthController] Error in login: ${error.message}`);
             return this.errorResponse('Invalid credentials', 401);
         }
     }

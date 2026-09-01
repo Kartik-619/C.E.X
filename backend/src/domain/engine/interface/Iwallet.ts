@@ -4,6 +4,7 @@ export interface IWallet <T>{
     // Read operations
     getBalance(userId: string, asset: string): Promise<Balance>;
     checkBalance(userId:string,asset:string,amount:number):Promise<boolean>;
+    exists(userId: string): Promise<boolean>;
     // Write operations
     lockFunds(userId: string, asset: string, amount: number): Promise<void>;
     unlockFunds(userId: string, asset: string, amount: number): Promise<void>;
