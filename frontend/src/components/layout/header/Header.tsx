@@ -1,14 +1,26 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge/Badge";
+import { useAuth } from "@/context/UserContext";
 
 interface HeaderProps {
   connected?: boolean;
   onToggleSidebar?: () => void;
+  username?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ connected, onToggleSidebar }) => {
+export const Header: React.FC<HeaderProps> = ({ connected, onToggleSidebar, username }) => {
+  const { logout, user } = useAuth();
+  const router = useRouter();
+  const name = username || user?.username || user?.email || "";
+
+  function handleLogout() {
+    logout();
+    router.push("/");
+  }
+
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90">
       <div className="mx-auto flex h-16 items-center justify-between gap-4 px-4 sm:px-6">
@@ -53,6 +65,20 @@ export const Header: React.FC<HeaderProps> = ({ connected, onToggleSidebar }) =>
             />
             {connected ? "Live" : "Connecting"}
           </span>
+
+          {name && (
+            <>
+              <span className="hidden text-sm font-medium text-zinc-700 dark:text-zinc-300 md:block">
+                {name}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Sign out
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

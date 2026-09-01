@@ -2,15 +2,18 @@
 
 import type { AppRouter, RouteModule } from './route.interface';
 import type { OrderController } from '../controllers/order-controller';
+import type { AuthController } from '../controllers/auth-controller';
 import { HealthRoutes } from './health.routes';
 import { OrderRoutes } from './order.routes';
+import { AuthRoutes } from './auth.routes';
 
 export class Routes {
     private modules: RouteModule[];
 
-    constructor(orderController: OrderController) {
+    constructor(orderController: OrderController, authController: AuthController) {
         this.modules = [
             new HealthRoutes(),
+            new AuthRoutes(authController),
             new OrderRoutes(orderController),
         ];
     }

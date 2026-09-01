@@ -2,7 +2,7 @@
 
 import React from "react";
 import { WebSocketProvider } from "@/context/WebSocketContext";
-import { UserProvider } from "@/context/UserContext";
+import { AuthProvider } from "@/context/UserContext";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -10,8 +10,8 @@ interface ProvidersProps {
 
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
   return (
-    <UserProvider>
+    <AuthProvider>
       <WebSocketProvider>{children}</WebSocketProvider>
-    </UserProvider>
+    </AuthProvider>
   );
 };

@@ -53,3 +53,29 @@ export interface TradeHistoryEntry {
   timestamp: string;
   orderId: string;
 }
+
+// ── Auth ────────────────────────────────────────────────────────────
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  username: string;
+  password: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
