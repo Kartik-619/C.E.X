@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header/Header";
 import { Sidebar } from "@/components/layout/sidebar/Sidebar";
 import { OrderBook } from "@/components/trading/order-book/OrderBook";
-import { WalletSection } from "@/components/trading/wallet-section/WalletSection";
 import { OrderForm } from "@/components/trading/order-form/OrderForm";
 import { TradeHistory } from "@/components/trading/trade-history/TradeHistory";
 import { useWebSocketContext } from "@/context/WebSocketContext";
@@ -59,9 +58,8 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-              {/* Left column: balance + order form */}
+              {/* Left column: order form */}
               <div className="space-y-5 xl:col-span-4">
-                <WalletSection userId={userId} />
                 <OrderForm userId={userId} />
               </div>
 

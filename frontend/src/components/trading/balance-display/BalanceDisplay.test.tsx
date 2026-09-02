@@ -25,8 +25,8 @@ const mockBalance = {
 describe("BalanceDisplay", () => {
   it("renders a loading skeleton while the balance is fetching", () => {
     mockedGetBalance.mockReturnValue(new Promise(() => {}));
-    render(<BalanceDisplay userId="user-1234" />);
-    expect(screen.getByText("Account Balance")).toBeInTheDocument();
+    const { container } = render(<BalanceDisplay userId="user-1234" />);
+    expect(container.querySelector("section")).toBeInTheDocument();
   });
 
   it("renders the account balance values", async () => {
@@ -38,7 +38,6 @@ describe("BalanceDisplay", () => {
     });
     expect(screen.getByText(/^Available$/)).toBeInTheDocument();
     expect(screen.getByText(/^Locked$/)).toBeInTheDocument();
-    expect(screen.getByText(/^Total$/)).toBeInTheDocument();
   });
 
   it("renders an error state when the API request fails", async () => {

@@ -5,6 +5,8 @@ import type { BalanceResponse } from "@/types/api";
 import { Input } from "@/components/ui/input/Input";
 import { Button } from "@/components/ui/button/Button";
 
+const PRESET_AMOUNTS = [100, 500, 1000, 5000];
+
 interface DepositFormProps {
   onDeposit: (amount: number, asset?: string) => Promise<BalanceResponse | null>;
   depositing: boolean;
@@ -30,8 +32,16 @@ export const DepositForm: React.FC<DepositFormProps> = ({ onDeposit, depositing,
     const result = await onDeposit(parsed, "USD");
     if (result) {
       setAmount("");
-      setSuccess(`Added ${parsed.toLocaleString("en-US", { style: "currency", currency: "USD" })} to your wallet`);
+      setSuccess(
+        `Added ${parsed.toLocaleString("en-US", { style: "currency", currency: "USD" })} to your wallet`
+      );
     }
+  };
+
+  const handlePreset = (value: number) => {
+    setFormError(null);
+    setSuccess(null);
+    setAmount(value.toString());
   };
 
   return (
@@ -44,6 +54,24 @@ export const DepositForm: React.FC<DepositFormProps> = ({ onDeposit, depositing,
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4">
+        <div className="grid grid-cols-4 gap-2">
+          {PRESET_AMOUNTS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => handlePreset(preset)}
+              disabled={depositing}
+              className={`rounded-md border px-2 py-1.5 text-xs font-medium tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                amount === preset.toString()
+                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+              }`}
+            >
+              ${preset.toLocaleString()}
+            </button>
+          ))}
+        </div>
+
         <Input
           type="number"
           label="Amount (USD)"
@@ -64,7 +92,12 @@ export const DepositForm: React.FC<DepositFormProps> = ({ onDeposit, depositing,
         )}
 
         {success && (
-          <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+          <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 dark:bg-emerald-900/20">
+            <svg className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+            <p className="text-sm text-emerald-700 dark:text-emerald-300">{success}</p>
+          </div>
         )}
 
         <Button type="submit" disabled={depositing || !amount} className="w-full">

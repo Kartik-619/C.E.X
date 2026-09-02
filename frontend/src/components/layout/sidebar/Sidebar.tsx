@@ -24,6 +24,17 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: "Wallet",
+    href: "/wallet",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="6" width="20" height="14" rx="2" />
+        <circle cx="16" cy="13" r="1.5" />
+        <path d="M2 10h20" />
+      </svg>
+    ),
+  },
+  {
     label: "Orders",
     href: "/dashboard",
     icon: (
