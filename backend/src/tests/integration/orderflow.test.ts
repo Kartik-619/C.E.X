@@ -132,7 +132,7 @@ describe('Order Flow Integration', () => {
             expect(data).toHaveProperty('id');
 
             // Verify order is in book
-            const orderBook = orderBookStore.getOrderBook();
+            const orderBook = await orderBookStore.getOrderBook();
             expect(orderBook.length).toBe(1);
         });
 
@@ -172,7 +172,7 @@ describe('Order Flow Integration', () => {
             expect(cancelData.message).toBe('Order cancelled successfully');
 
             // 3. Verify order is removed
-            const orderBook = orderBookStore.getOrderBook();
+            const orderBook = await orderBookStore.getOrderBook();
             expect(orderBook.length).toBe(0);
 
             // 4. Verify funds are unlocked
@@ -248,7 +248,7 @@ describe('Order Flow Integration', () => {
 
             // The $99 and $100 sell orders should be matched
             // The $101 sell order remains
-            const orderBook = orderBookStore.getOrderBook();
+            const orderBook = await orderBookStore.getOrderBook();
             expect(orderBook.length).toBe(1);
 
             // ✅ FIX: Check that orderBook[0] exists before accessing price

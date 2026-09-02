@@ -4,9 +4,19 @@ import { serve } from 'bun';
 import { StandardEngine } from '../domain/engine/services/Engine';
 import { OrderBook } from '../domain/engine/services/orderBook/orderBook';
 import { Wallet } from '../domain/engine/services/wallet/wallet';
+
+// In-memory stores
 import { inmemory_OrderBookStore } from '../infra/store/orderbook-store';
 import { Inmemory_WalletStore } from '../infra/store/wallet-store';
 import { Inmemory_User } from '../infra/store/inmemory-user.store';
+
+// Database stores
+import { DbOrderBookStore } from '../infra/store/db-orderbook.store';
+import { DbWalletStore } from '../infra/store/db-wallet.store';
+import { DbUserStore } from '../infra/store/db-user.store';
+import { migrate } from '../infra/db/schema';
+import { closePool } from '../infra/db/connection';
+
 import { OrderService } from './service/order-service';
 import { AuthService } from './service/auth-service';
 import { OrderController } from './controllers/order-controller';
@@ -21,13 +31,29 @@ import { WebSocketBroadcaster } from '../domain/events/ws-broadcast.orderbook';
 import { LoggerFactory } from '../infra/logging/logger.factory';
 import { LogLevel } from '../infra/logging/log-level';
 
+const USE_DB = process.env.USE_DB === 'true';
+
 // 1. Create Logger
 const logger = LoggerFactory.createLogger('console', LogLevel.INFO);
 
-// 2. Infrastructure Layer
-const orderBookStore = new inmemory_OrderBookStore();
-const walletStore = new Inmemory_WalletStore();
-const userStore = new Inmemory_User();
+// 2. Infrastructure Layer — select store backend
+let orderBookStore: inmemory_OrderBookStore | DbOrderBookStore;
+let walletStore: Inmemory_WalletStore | DbWalletStore;
+let userStore: Inmemory_User | DbUserStore;
+
+if (USE_DB) {
+    logger.log(LogLevel.INFO, '[Server] Using PostgreSQL stores');
+    await migrate();
+    orderBookStore = new DbOrderBookStore();
+    walletStore = new DbWalletStore();
+    userStore = new DbUserStore();
+} else {
+    logger.log(LogLevel.INFO, '[Server] Using in-memory stores');
+    orderBookStore = new inmemory_OrderBookStore();
+    walletStore = new Inmemory_WalletStore();
+    userStore = new Inmemory_User();
+}
+
 const orderBook = new OrderBook(orderBookStore);
 const wallet = new Wallet(walletStore);
 const bus = new EventManager();
@@ -59,13 +85,13 @@ const routes = new Routes(orderController, authController);
 // 10. Create router adapter
 const router: AppRouter = {
     get: (path, handler) => {
-        console.log(`📌 GET ${path}`);
+        console.log(`GET ${path}`);
     },
     post: (path, handler) => {
-        console.log(`📌 POST ${path}`);
+        console.log(`POST ${path}`);
     },
     delete: (path, handler) => {
-        console.log(`📌 DELETE ${path}`);
+        console.log(`DELETE ${path}`);
     },
 };
 
@@ -113,7 +139,7 @@ const server = serve({
 
             if (path === '/api/health' && method === 'GET') {
                 response = new Response(
-                    JSON.stringify({ status: 'healthy' }),
+                    JSON.stringify({ status: 'healthy', storage: USE_DB ? 'postgresql' : 'in-memory' }),
                     { status: 200, headers }
                 );
             } else if (path === '/api/auth/register' && method === 'POST') {
@@ -143,9 +169,9 @@ const server = serve({
 
         } catch (error: any) {
             return new Response(
-                JSON.stringify({ 
+                JSON.stringify({
                     error: 'Internal server error',
-                    message: error.message 
+                    message: error.message
                 }),
                 { status: 500, headers }
             );
@@ -153,8 +179,9 @@ const server = serve({
     }
 });
 
-console.log(`🚀 Server running on http://localhost:${server.port}`);
-console.log(`📋 Endpoints:`);
+console.log(`Server running on http://localhost:${server.port}`);
+console.log(`Storage: ${USE_DB ? 'PostgreSQL' : 'In-Memory'}`);
+console.log(`Endpoints:`);
 console.log(`   POST   /api/auth/register  - Register a new user`);
 console.log(`   POST   /api/auth/login     - Login`);
 console.log(`   POST   /api/orders         - Place an order (auth)`);
@@ -164,13 +191,16 @@ console.log(`   GET    /api/balance/:userId - Get balance (auth)`);
 console.log(`   POST   /api/balance/deposit - Deposit funds (auth)`);
 console.log(`   GET    /api/orderbook       - Get order book`);
 console.log(`   GET    /api/health          - Health check`);
-console.log(`🔌 WebSocket running on ws://localhost:3001`);
+console.log(`WebSocket running on ws://localhost:3011`);
 
-// Graceful shutdown — release ports on SIGINT / SIGTERM
-const shutdown = () => {
-    console.log('\n🛑 Shutting down...');
+// Graceful shutdown
+const shutdown = async () => {
+    console.log('\nShutting down...');
     wsServer.stop();
     server.stop();
+    if (USE_DB) {
+        await closePool();
+    }
     process.exit(0);
 };
 

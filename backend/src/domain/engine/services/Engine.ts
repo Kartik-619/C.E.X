@@ -1,22 +1,22 @@
 // ../engine/StandardEngine.ts
 
 import { AbstractEngine } from "../interface/IMatchEngine";
-import { OrderBook } from "./orderBook/orderBook";
-import type { Order } from "../interface/IOrderBook";
-import type { Wallet } from "./wallet/wallet";
+import type { IOrderBook, Order } from "../interface/IOrderBook";
+import type { IWallet } from "../interface/Iwallet";
+import type { Balance } from "../interface/Ibalance";
 import type { ITrade } from "../interface/ITrade";
 
-import { LoggerFactory } from "../../../infra/logging/logger.factory"; 
+import { LoggerFactory } from "../../../infra/logging/logger.factory";
 import { LogLevel } from "../../../infra/logging/log-level";
 import { Logger } from "../../../infra/logging/logger";
 import { EventManager } from "../../events/event-bus";
 import { EventType } from "../../events/Ibroadcast.orderbook";
 
 export class StandardEngine extends AbstractEngine<Order> {
-    
+
     private readonly logger: Logger;
 
-    constructor(orderBook: OrderBook, wallet: Wallet, bus: EventManager) {
+    constructor(orderBook: IOrderBook, wallet: IWallet<Balance>, bus: EventManager) {
         super(orderBook, wallet, bus);
         this.logger = LoggerFactory.createLogger('console', LogLevel.INFO);
     }
@@ -204,32 +204,32 @@ export class StandardEngine extends AbstractEngine<Order> {
         await this.wallet.deposit(userId, asset, amount);
     }
 
-    getOrderBook(): Order[] {
-        return this.orderBook.getOrderBook();
+    async getOrderBook(): Promise<Order[]> {
+        return await this.orderBook.getOrderBook();
     }
 
-    getBestBuy(): Order | null {
-        return this.orderBook.getBestBid();
+    async getBestBuy(): Promise<Order | null> {
+        return await this.orderBook.getBestBid();
     }
 
-    getBestSell(): Order | null {
-        return this.orderBook.getBestAsk();
+    async getBestSell(): Promise<Order | null> {
+        return await this.orderBook.getBestAsk();
     }
 
     async getMatch(order: Order) {
-        return this.orderBook.findBestMatch(order);
+        return await this.orderBook.findBestMatch(order);
     }
 
     private async getBestMatch(order: Order): Promise<Order | null> {
         if (order.side === "buy") {
-            const bestAsk = this.getBestSell();
+            const bestAsk = await this.getBestSell();
             if (!bestAsk) return null;
             if (bestAsk.price > order.price) return null;
             if (bestAsk.quantity <= 0) return null;
             return bestAsk;
         }
 
-        const bestBid = this.getBestBuy();
+        const bestBid = await this.getBestBuy();
         if (!bestBid) return null;
         if (bestBid.price < order.price) return null;
         if (bestBid.quantity <= 0) return null;

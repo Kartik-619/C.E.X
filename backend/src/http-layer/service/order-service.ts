@@ -107,7 +107,7 @@ export class OrderService {
     async getOrderBook(): Promise<OrderBookSnapshotDTO> {
         this.logger.log(LogLevel.INFO, `[OrderService] Fetching order book snapshot`);
 
-        const orders = this.engine.getOrderBook();
+        const orders = await this.engine.getOrderBook();
 
         const bids = this.aggregateLevels(orders.filter((order) => order.side === 'buy'));
         const asks = this.aggregateLevels(orders.filter((order) => order.side === 'sell'));

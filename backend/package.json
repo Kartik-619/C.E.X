@@ -8,6 +8,7 @@
     "@types/bun": "latest",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.1.2",
+    "@types/pg": "^8.23.1",
     "@types/ws": "^8.18.1"
   },
   "peerDependencies": {

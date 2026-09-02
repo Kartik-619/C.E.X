@@ -1,10 +1,9 @@
 import type { Order, IOrderBook } from "../../interface/IOrderBook";
-import type { inmemory_OrderBookStore } from "../../../../infra/store/orderbook-store";
 
 export class OrderBook implements IOrderBook {
-    private store: inmemory_OrderBookStore;
-    
-    constructor(store: inmemory_OrderBookStore) {
+    private store: IOrderBook;
+
+    constructor(store: IOrderBook) {
         this.store = store;
     }
 
@@ -22,14 +21,13 @@ export class OrderBook implements IOrderBook {
         await this.store.cancelOrder(orderId);
     }
 
-  async updateOrder( orderId:number, quantity:number): Promise<Order> {
-        const order =await this.store.getOrder(orderId);
-        if(!order){
+    async updateOrder(orderId: number, quantity: number): Promise<Order> {
+        const order = await this.store.getOrder(orderId);
+        if (!order) {
             throw new Error(" Not found")
         }
         console.log("[OrderBook] Processing order update...");
-        return  await this.store.updateOrder(orderId,quantity);
-        
+        return await this.store.updateOrder(orderId, quantity);
     }
 
     async getOrder(orderId: number): Promise<Order | null> {
@@ -37,45 +35,52 @@ export class OrderBook implements IOrderBook {
         return await this.store.getOrder(orderId);
     }
 
-    getBestBid(): Order | null {
-        return this.store.getBestBid();
+    async getBestBid(): Promise<Order | null> {
+        return await this.store.getBestBid();
     }
 
-    getBestAsk(): Order | null {
-        return this.store.getBestAsk();
+    async getBestAsk(): Promise<Order | null> {
+        return await this.store.getBestAsk();
     }
 
-    getOrderBook(): Order[] {
-        return this.store.getOrderBook();
+    async getOrderBook(): Promise<Order[]> {
+        return await this.store.getOrderBook();
     }
 
     async findBestMatch(order: Order): Promise<Order | null> {
         console.log("[OrderBook] Finding best match...");
-        return await this.store.findBestMatch(order);  // ✅ Fixed: delegate to store
+        return await this.store.findBestMatch(order);
     }
 
-    // Helper methods
     getOrdersBySide(side: 'buy' | 'sell'): Order[] {
-        return this.store.getOrdersBySide(side);
+        if ('getOrdersBySide' in this.store && typeof (this.store as any).getOrdersBySide === 'function') {
+            return (this.store as any).getOrdersBySide(side);
+        }
+        return [];
     }
 
     getOrderCount(): number {
-        return this.store.getOrderCount();
+        if ('getOrderCount' in this.store && typeof (this.store as any).getOrderCount === 'function') {
+            return (this.store as any).getOrderCount();
+        }
+        return 0;
     }
 
     clearAllOrders(): void {
-        this.store.clearAllOrders();
+        if ('clearAllOrders' in this.store && typeof (this.store as any).clearAllOrders === 'function') {
+            (this.store as any).clearAllOrders();
+        }
     }
 
-    getBestPrice(side: 'buy' | 'sell'): number | null {
-        return this.store.getBestPrice(side);
+    async getBestPrice(side: 'buy' | 'sell'): Promise<number | null> {
+        if ('getBestPrice' in this.store && typeof (this.store as any).getBestPrice === 'function') {
+            return await (this.store as any).getBestPrice(side);
+        }
+        return null;
     }
 
-    // OrderBook.ts
-
-async atomicMatch(order: Order, quantity: number): Promise<Order | null> {
-    console.log("[OrderBook] Atomic matching...");
-    return await this.store.atomicMatch(order, quantity);
-}
-    
+    async atomicMatch(order: Order, quantity: number): Promise<Order | null> {
+        console.log("[OrderBook] Atomic matching...");
+        return await this.store.atomicMatch(order, quantity);
+    }
 }

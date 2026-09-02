@@ -107,15 +107,17 @@ export class inmemory_OrderBookStore implements IOrderBook {
         const order = this.orders.get(orderId);
         return order || null; 
     }
-    getBestBid(): Order | null {
+    async getBestBid(): Promise<Order | null> {
         const best = this.bids[0];
-        return best ?? null;   }
+        return best ?? null;
+    }
 
-    getBestAsk(): Order | null {
+    async getBestAsk(): Promise<Order | null> {
         const best = this.asks[0];
-        return best ?? null;    }
+        return best ?? null;
+    }
 
-    getOrderBook(): Order[] {
+    async getOrderBook(): Promise<Order[]> {
         return Array.from(this.orders.values());
     }
 
@@ -123,29 +125,23 @@ export class inmemory_OrderBookStore implements IOrderBook {
         let bestMatch: Order | null = null;
 
         if (order.side === 'buy') {
-            // For a BUY order, find the best ask (cheapest seller)
-            bestMatch = this.getBestAsk();
+            bestMatch = await this.getBestAsk();
 
             if (bestMatch) {
-                // Check price compatibility: buy price must be >= ask price
                 if (bestMatch.price > order.price) {
-                    return null; // No valid match
+                    return null;
                 }
-                // Check if the matched order has quantity
                 if (bestMatch.quantity <= 0) {
                     return null;
                 }
             }
         } else if (order.side === 'sell') {
-            // For a SELL order, find the best bid (highest buyer)
-            bestMatch = this.getBestBid();
+            bestMatch = await this.getBestBid();
 
             if (bestMatch) {
-                // Check price compatibility: bid price must be >= sell price
                 if (bestMatch.price < order.price) {
-                    return null; // No valid match
+                    return null;
                 }
-                // Check if the matched order has quantity
                 if (bestMatch.quantity <= 0) {
                     return null;
                 }
@@ -156,10 +152,9 @@ export class inmemory_OrderBookStore implements IOrderBook {
     }
 
     async atomicMatch(order: Order, quantity: number): Promise<Order | null> {
-        //  Find the best match
         const bestMatch = order.side === 'buy'
-            ? this.getBestAsk()
-            : this.getBestBid();
+            ? await this.getBestAsk()
+            : await this.getBestBid();
 
         if (!bestMatch) return null;
 
@@ -233,12 +228,12 @@ export class inmemory_OrderBookStore implements IOrderBook {
     }
 
     // Helper method to get best price for a side
-    getBestPrice(side: 'buy' | 'sell'): number | null {
+    async getBestPrice(side: 'buy' | 'sell'): Promise<number | null> {
         if (side === 'buy') {
-            const best = this.getBestBid();
+            const best = await this.getBestBid();
             return best ? best.price : null;
         } else {
-            const best = this.getBestAsk();
+            const best = await this.getBestAsk();
             return best ? best.price : null;
         }
     }

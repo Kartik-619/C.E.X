@@ -23,7 +23,7 @@ describe('OrderService', () => {
                 available: 1000,
                 locked: 0
             })),
-            getOrderBook: mock(() => [
+            getOrderBook: mock(async () => [
                 { orderId: 1, side: 'buy', price: 100, quantity: 2, userId: 'alice', symbol: 'BTC/USD', type: 'LIMIT', createdAt: 1 },
                 { orderId: 2, side: 'buy', price: 101, quantity: 3, userId: 'alice', symbol: 'BTC/USD', type: 'LIMIT', createdAt: 2 },
                 { orderId: 3, side: 'sell', price: 102, quantity: 1, userId: 'bob', symbol: 'BTC/USD', type: 'LIMIT', createdAt: 3 }
