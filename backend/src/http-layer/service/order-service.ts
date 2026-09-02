@@ -4,6 +4,7 @@ import { StandardEngine } from "../../domain/engine/services/Engine";
 import { CreateOrderRequestDTO, OrderResponseDTO } from "../dto/requestorderDTO";
 import type { Order } from "../../domain/engine/interface/IOrderBook";
 import { BalanceResponseDTO } from "../dto/balance-response.dto";
+import type { DepositRequestDTO } from "../dto/deposit-request.dto";
 import { OrderBookSnapshotDTO, OrderBookLevelDTO } from "../dto/orderbook-response.dto";
 
 import { LoggerFactory } from "../../infra/logging/logger.factory";
@@ -77,6 +78,29 @@ export class OrderService {
     // Check whether a user has a wallet / is a known account
     async hasWallet(userId: string): Promise<boolean> {
         return this.engine.hasWallet(userId);
+    }
+
+    async deposit(dto: DepositRequestDTO): Promise<BalanceResponseDTO> {
+        this.logger.log(LogLevel.INFO, `[OrderService] Depositing ${dto.amount} ${dto.asset} for user: ${dto.userId}`);
+
+        if (!dto.userId) {
+            throw new Error('User ID is required');
+        }
+        if (!dto.asset) {
+            throw new Error('Asset is required');
+        }
+        if (dto.amount <= 0) {
+            throw new Error('Amount must be greater than 0');
+        }
+
+        const hasWallet = await this.engine.hasWallet(dto.userId);
+        if (!hasWallet) {
+            throw new Error('User not found');
+        }
+
+        await this.engine.deposit(dto.userId, dto.asset, dto.amount);
+
+        return this.getBalance(dto.userId, dto.asset);
     }
 
     // 5. Get order book snapshot

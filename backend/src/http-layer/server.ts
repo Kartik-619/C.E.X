@@ -130,6 +130,8 @@ const server = serve({
                 response = await requireAuth((req) => orderController.cancelOrder(req))(request);
             } else if (path.startsWith('/api/balance/') && method === 'GET') {
                 response = await requireAuth((req) => orderController.getBalance(req))(request);
+            } else if (path === '/api/balance/deposit' && method === 'POST') {
+                response = await requireAuth((req, auth) => orderController.deposit(req, auth))(request);
             } else {
                 response = new Response(
                     JSON.stringify({ error: `Route ${method} ${path} not found` }),
@@ -159,6 +161,7 @@ console.log(`   POST   /api/orders         - Place an order (auth)`);
 console.log(`   POST   /api/orders/add     - Add order to book (auth)`);
 console.log(`   DELETE /api/orders          - Cancel an order (auth)`);
 console.log(`   GET    /api/balance/:userId - Get balance (auth)`);
+console.log(`   POST   /api/balance/deposit - Deposit funds (auth)`);
 console.log(`   GET    /api/orderbook       - Get order book`);
 console.log(`   GET    /api/health          - Health check`);
 console.log(`🔌 WebSocket running on ws://localhost:3001`);

@@ -2,6 +2,8 @@
 
 import type { OrderService } from '../service/order-service';
 import type { CreateOrderRequestDTO, CancelOrderRequestDTO } from '../dto/requestorderDTO';
+import type { DepositRequestDTO } from '../dto/deposit-request.dto';
+import type { AuthContext } from '../middleware/auth-middleware';
 
 import { LoggerFactory } from "../../infra/logging/logger.factory"; 
 import { LogLevel } from "../../infra/logging/log-level";
@@ -148,7 +150,44 @@ export class OrderController {
         }
     }
 
-    // 5. Get order book
+    // 5. Deposit funds
+    async deposit(request: Request, auth: AuthContext): Promise<Response> {
+        this.logger.log(LogLevel.INFO, `[OrderController] Received deposit request`);
+        try {
+            const body = await request.json() as Record<string, unknown>;
+
+            if (!body || typeof body !== 'object') {
+                this.logger.log(LogLevel.WARN, `[OrderController] Invalid request body for deposit`);
+                return this.errorResponse('Invalid request body', 400);
+            }
+
+            const dto: DepositRequestDTO = {
+                userId: body.userId as string,
+                asset: (body.asset as string) || 'USD',
+                amount: Number(body.amount),
+            };
+
+            if (!dto.userId) {
+                return this.errorResponse('User ID is required', 400);
+            }
+            if (dto.userId !== auth.user.id) {
+                return this.errorResponse('Cannot deposit to another user\'s wallet', 403);
+            }
+            if (dto.amount <= 0 || Number.isNaN(dto.amount)) {
+                return this.errorResponse('Amount must be greater than 0', 400);
+            }
+
+            const balance = await this.orderService.deposit(dto);
+            this.logger.log(LogLevel.INFO, `[OrderController] Successfully deposited ${dto.amount} ${dto.asset} for user: ${dto.userId}`);
+            return this.successResponse(balance, 200);
+        } catch (error: any) {
+            this.logger.log(LogLevel.ERROR, `[OrderController] Error in deposit: ${error.message}`);
+            const status = error.message === 'User not found' ? 404 : 400;
+            return this.errorResponse(error, status);
+        }
+    }
+
+    // 6. Get order book
     async getOrderBook(request: Request): Promise<Response> {
         this.logger.log(LogLevel.INFO, `[OrderController] Received getOrderBook request`);
         try {

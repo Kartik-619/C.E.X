@@ -199,6 +199,11 @@ export class StandardEngine extends AbstractEngine<Order> {
         return this.wallet.exists(userId);
     }
 
+    async deposit(userId: string, asset: string, amount: number): Promise<void> {
+        this.logger.log(LogLevel.INFO, `[Engine] Depositing ${amount} ${asset} for user: ${userId}`);
+        await this.wallet.deposit(userId, asset, amount);
+    }
+
     getOrderBook(): Order[] {
         return this.orderBook.getOrderBook();
     }

@@ -2,6 +2,7 @@ import type {
   OrderRequest,
   OrderResponse,
   BalanceResponse,
+  DepositRequest,
   OrderBookSnapshot,
   HealthResponse,
   AuthResponse,
@@ -87,6 +88,21 @@ export async function getBalance(userId: string): Promise<BalanceResponse> {
   if (!response.ok) {
     const errorData = await response.json().catch(() => undefined);
     throw new Error(extractErrorMessage(errorData, "Failed to fetch balance"));
+  }
+
+  return response.json() as Promise<BalanceResponse>;
+}
+
+export async function depositFunds(request: DepositRequest): Promise<BalanceResponse> {
+  const response = await fetch(`${API_BASE_URL}/balance/deposit`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to deposit funds"));
   }
 
   return response.json() as Promise<BalanceResponse>;

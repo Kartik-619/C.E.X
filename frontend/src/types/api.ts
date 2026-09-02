@@ -27,6 +27,12 @@ export interface BalanceResponse {
   total: number;
 }
 
+export interface DepositRequest {
+  userId: string;
+  asset: string;
+  amount: number;
+}
+
 export interface OrderBookSnapshot {
   bids: OrderBookLevel[];
   asks: OrderBookLevel[];

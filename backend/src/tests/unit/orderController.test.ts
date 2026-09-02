@@ -70,6 +70,13 @@ describe('OrderController', () => {
                 total: 1000
             })),
             hasWallet: mock(async (userId: string) => true),
+            deposit: mock(async (dto: { userId: string; asset: string; amount: number }) => ({
+                userId: dto.userId,
+                asset: dto.asset,
+                available: 1000 + dto.amount,
+                locked: 0,
+                total: 1000 + dto.amount
+            })),
             getOrderBook: mock(async () => ({
                 bids: [{ price: 100, quantity: 2 }],
                 asks: [{ price: 101, quantity: 1 }],
@@ -268,6 +275,55 @@ describe('OrderController', () => {
 
             expect(response.status).toBe(400); // ← Changed from 500
             expect(data.error).toContain('User ID is required');
+        });
+    });
+
+    describe('deposit', () => {
+        const auth = { user: { id: 'alice', email: 'alice@test.com', username: 'alice', createdAt: '', updatedAt: '' } };
+
+        it('should deposit funds and return updated balance', async () => {
+            const request = new Request('http://localhost/api/balance/deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: 'alice', asset: 'USD', amount: 500 })
+            });
+
+            const response = await controller.deposit(request, auth);
+            const data = await parseResponse<{ available: number; total: number }>(response);
+
+            expect(response.status).toBe(200);
+            expect(data.available).toBe(1500);
+            expect(data.total).toBe(1500);
+            expect(mockOrderService.deposit).toHaveBeenCalledWith({
+                userId: 'alice',
+                asset: 'USD',
+                amount: 500
+            });
+        });
+
+        it('should reject deposit for another user', async () => {
+            const request = new Request('http://localhost/api/balance/deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: 'bob', asset: 'USD', amount: 100 })
+            });
+
+            const response = await controller.deposit(request, auth);
+            const data = await parseResponse<ErrorResponse>(response);
+
+            expect(response.status).toBe(403);
+            expect(data.error).toContain('another user');
+        });
+
+        it('should reject invalid amount', async () => {
+            const request = new Request('http://localhost/api/balance/deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: 'alice', asset: 'USD', amount: -10 })
+            });
+
+            const response = await controller.deposit(request, auth);
+            expect(response.status).toBe(400);
         });
     });
 
