@@ -33,7 +33,7 @@ export default function Home() {
               Sign in
             </Link>
             <Link
-              href="/dashboard"
+              href="/login"
               className="inline-flex items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
               Launch App
@@ -62,7 +62,7 @@ export default function Home() {
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                href="/dashboard"
+                href="/login"
                 className="inline-flex w-full items-center justify-center rounded-md bg-zinc-900 px-8 py-3.5 text-base font-medium text-white transition-all hover:bg-zinc-700 hover:shadow-lg dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 sm:w-auto"
               >
                 Open the Dashboard
@@ -322,7 +322,7 @@ export default function Home() {
               Jump into the live dashboard and experience the order flow.
             </p>
             <Link
-              href="/dashboard"
+              href="/login"
               className="mt-8 inline-flex items-center justify-center rounded-md bg-zinc-900 px-8 py-3.5 text-base font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
               Launch Dashboard

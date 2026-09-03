@@ -46,6 +46,13 @@ export class WebSocketBroadcaster {
         this.bus.subscriber(EventType.ORDER_FAILED,{
             update:(data)=>this.onOrderFailled(data)
         })
+
+        this.bus.subscriber(EventType.OTPASKED,{
+            update:(data)=>this.onOTPASK(data)
+        })
+        this.bus.subscriber(EventType.OTPFAIL,{
+            update:(data)=>this.onOTPFAIL(data)
+        })
     }
 
     //  event handlers
@@ -74,5 +81,11 @@ export class WebSocketBroadcaster {
     }
     private onOrderFailled(data:any):void{
         this.wsServer.sendToUser(data.userId,EventType.ORDER_FAILED)
+    }
+    private onOTPASK(data:any):void{
+        this.wsServer.sendToUser(data.userId,EventType.OTPASKED)
+    }
+    private onOTPFAIL(data:any):void{
+        this.wsServer.sendToUser(data.userId,EventType.OTPFAIL)
     }
 }
