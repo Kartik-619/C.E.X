@@ -279,7 +279,7 @@ describe('OrderController', () => {
     });
 
     describe('deposit', () => {
-        const auth = { user: { id: 'alice', email: 'alice@test.com', username: 'alice', createdAt: '', updatedAt: '' } };
+        const auth = { user: { id: 'alice', email: 'alice@test.com', username: 'alice', provider: 'local', providerUserId: null, createdAt: new Date(), updatedAt: new Date() } };
 
         it('should deposit funds and return updated balance', async () => {
             const request = new Request('http://localhost/api/balance/deposit', {

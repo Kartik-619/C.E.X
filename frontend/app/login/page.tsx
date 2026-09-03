@@ -1,16 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/UserContext";
 import { Button } from "@/components/ui/button/Button";
+import { getOAuthProviders } from "@/services/api";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithOAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [oauthProviders, setOauthProviders] = useState<string[]>([]);
+
+  useEffect(() => {
+    getOAuthProviders()
+      .then((res) => setOauthProviders(res.providers))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,6 +31,23 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleOAuthLogin(provider: string) {
+    setError(null);
+    try {
+      await loginWithOAuth(provider);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "OAuth login failed");
+    }
+  }
+
+  function providerDisplayName(provider: string): string {
+    switch (provider) {
+      case "google": return "Google";
+      case "github": return "GitHub";
+      default: return provider;
     }
   }
 
@@ -41,6 +66,32 @@ export default function LoginPage() {
             Enter your credentials to access the dashboard
           </p>
         </div>
+
+        {oauthProviders.length > 0 && (
+          <div className="mb-6 space-y-2">
+            {oauthProviders.map((provider) => (
+              <Button
+                key={provider}
+                variant="outline"
+                className="w-full"
+                size="lg"
+                onClick={() => handleOAuthLogin(provider)}
+              >
+                Sign in with {providerDisplayName(provider)}
+              </Button>
+            ))}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-200 dark:border-zinc-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-zinc-50 px-2 text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+                  or
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (

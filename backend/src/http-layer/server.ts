@@ -21,6 +21,7 @@ import { OrderService } from './service/order-service';
 import { AuthService } from './service/auth-service';
 import { OrderController } from './controllers/order-controller';
 import { AuthController } from './controllers/auth-controller';
+import { OAuthController } from './controllers/oauth-controller';
 import { AuthMiddleware } from './middleware/auth-middleware';
 import { Routes } from './routes/index';
 import type { AppRouter } from './routes/route.interface';
@@ -75,12 +76,13 @@ const authService = new AuthService(userStore, walletStore);
 // 7. Controller Layer
 const orderController = new OrderController(orderService);
 const authController = new AuthController(authService);
+const oauthController = new OAuthController(authService);
 
 // 8. Middleware
 const authMiddleware = new AuthMiddleware(authService);
 
 // 9. Routes
-const routes = new Routes(orderController, authController);
+const routes = new Routes(orderController, authController, oauthController);
 
 // 10. Create router adapter
 const router: AppRouter = {
@@ -146,6 +148,12 @@ const server = serve({
                 response = await authController.register(request);
             } else if (path === '/api/auth/login' && method === 'POST') {
                 response = await authController.login(request);
+            } else if (path === '/api/auth/oauth' && method === 'GET') {
+                response = await oauthController.initiate(request);
+            } else if (path === '/api/auth/oauth/callback' && method === 'GET') {
+                response = await oauthController.callback(request);
+            } else if (path === '/api/auth/oauth/providers' && method === 'GET') {
+                response = await oauthController.providers(request);
             } else if (path === '/api/orderbook' && method === 'GET') {
                 response = await orderController.getOrderBook(request);
             } else if (path === '/api/orders' && method === 'POST') {
@@ -182,15 +190,18 @@ const server = serve({
 console.log(`Server running on http://localhost:${server.port}`);
 console.log(`Storage: ${USE_DB ? 'PostgreSQL' : 'In-Memory'}`);
 console.log(`Endpoints:`);
-console.log(`   POST   /api/auth/register  - Register a new user`);
-console.log(`   POST   /api/auth/login     - Login`);
-console.log(`   POST   /api/orders         - Place an order (auth)`);
-console.log(`   POST   /api/orders/add     - Add order to book (auth)`);
-console.log(`   DELETE /api/orders          - Cancel an order (auth)`);
-console.log(`   GET    /api/balance/:userId - Get balance (auth)`);
-console.log(`   POST   /api/balance/deposit - Deposit funds (auth)`);
-console.log(`   GET    /api/orderbook       - Get order book`);
-console.log(`   GET    /api/health          - Health check`);
+console.log(`   POST   /api/auth/register          - Register a new user`);
+console.log(`   POST   /api/auth/login             - Login`);
+console.log(`   GET    /api/auth/oauth              - Initiate OAuth flow`);
+console.log(`   GET    /api/auth/oauth/callback     - OAuth callback`);
+console.log(`   GET    /api/auth/oauth/providers    - List configured OAuth providers`);
+console.log(`   POST   /api/orders                 - Place an order (auth)`);
+console.log(`   POST   /api/orders/add             - Add order to book (auth)`);
+console.log(`   DELETE /api/orders                  - Cancel an order (auth)`);
+console.log(`   GET    /api/balance/:userId         - Get balance (auth)`);
+console.log(`   POST   /api/balance/deposit        - Deposit funds (auth)`);
+console.log(`   GET    /api/orderbook               - Get order book`);
+console.log(`   GET    /api/health                  - Health check`);
 console.log(`WebSocket running on ws://localhost:3011`);
 
 // Graceful shutdown

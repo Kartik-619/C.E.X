@@ -8,17 +8,20 @@ import { AuthRoutes } from '../../http-layer/routes/auth.routes';
 import type { AppRouter } from '../../http-layer/routes/route.interface';
 import type { OrderController } from '../../http-layer/controllers/order-controller';
 import type { AuthController } from '../../http-layer/controllers/auth-controller';
+import type { OAuthController } from '../../http-layer/controllers/oauth-controller';
 
 describe('Routes', () => {
     let mockOrderController: OrderController;
     let mockAuthController: AuthController;
+    let mockOAuthController: OAuthController;
     let routes: Routes;
     let mockRouter: AppRouter;
 
     beforeEach(() => {
         mockOrderController = {} as OrderController;
         mockAuthController = {} as AuthController;
-        routes = new Routes(mockOrderController, mockAuthController);
+        mockOAuthController = {} as OAuthController;
+        routes = new Routes(mockOrderController, mockAuthController, mockOAuthController);
         mockRouter = {
             get: mock(() => {}),
             post: mock(() => {}),

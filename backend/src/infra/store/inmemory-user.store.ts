@@ -13,12 +13,14 @@ export class Inmemory_User implements IUserStore {
         this.userById = new Map<string, User>();
     }
 
-    async createUser(username: string, email: string, passwordHash: string): Promise<User> {
+    async createUser(username: string, email: string, passwordHash: string | null, provider: string = 'local', providerUserId: string | null = null): Promise<User> {
         const user: User = {
             id: crypto.randomUUID(),
             username,
             email,
             passwordHash,
+            provider,
+            providerUserId,
             createdAt: new Date(Date.now()),
             updatedAt: new Date(Date.now()),
         }

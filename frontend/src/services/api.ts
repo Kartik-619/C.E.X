@@ -77,6 +77,36 @@ export async function login(request: LoginRequest): Promise<AuthResponse> {
   return response.json() as Promise<AuthResponse>;
 }
 
+// ── OAuth API ───────────────────────────────────────────────────────
+
+export async function getOAuthUrl(provider: string): Promise<{ url: string }> {
+  const response = await fetch(
+    `${API_BASE_URL}/auth/oauth?provider=${encodeURIComponent(provider)}`,
+    { method: "GET", headers: { "Content-Type": "application/json" } }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "OAuth initiation failed"));
+  }
+
+  return response.json() as Promise<{ url: string }>;
+}
+
+export async function getOAuthProviders(): Promise<{ providers: string[] }> {
+  const response = await fetch(`${API_BASE_URL}/auth/oauth/providers`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to fetch OAuth providers"));
+  }
+
+  return response.json() as Promise<{ providers: string[] }>;
+}
+
 // ── Protected API (requires auth header) ────────────────────────────
 
 export async function getBalance(userId: string): Promise<BalanceResponse> {

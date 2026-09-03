@@ -5,6 +5,7 @@ import type { User } from "@/types/api";
 import {
   login as loginApi,
   register as registerApi,
+  getOAuthUrl,
   getToken,
   setToken,
   clearToken,
@@ -16,6 +17,8 @@ interface AuthState {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<void>;
+  loginWithOAuth: (provider: string) => Promise<void>;
+  handleOAuthCallback: (token: string) => void;
   logout: () => void;
 }
 
@@ -66,8 +69,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const loginWithOAuth = useCallback(async (provider: string) => {
+    const { url } = await getOAuthUrl(provider);
+    window.location.href = url;
+  }, []);
+
+  const handleOAuthCallback = useCallback((token: string) => {
+    setToken(token);
+    setTokenState(token);
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setUser({
+        id: payload.userId,
+        username: payload.email,
+        email: payload.email,
+        createdAt: "",
+        updatedAt: "",
+      });
+    } catch {
+      clearToken();
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, loginWithOAuth, handleOAuthCallback, logout }}>
       {children}
     </AuthContext.Provider>
   );

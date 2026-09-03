@@ -4,15 +4,15 @@ import { getPool } from "../db/connection";
 
 export class DbUserStore implements IUserStore {
 
-    async createUser(username: string, email: string, passwordHash: string): Promise<User> {
+    async createUser(username: string, email: string, passwordHash: string | null, provider: string = 'local', providerUserId: string | null = null): Promise<User> {
         const pool = getPool();
         const id = crypto.randomUUID();
         const now = new Date();
 
         await pool.query(
-            `INSERT INTO users (id, username, email, password_hash, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [id, username, email, passwordHash, now, now]
+            `INSERT INTO users (id, username, email, password_hash, provider, provider_user_id, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [id, username, email, passwordHash, provider, providerUserId, now, now]
         );
 
         return {
@@ -20,6 +20,8 @@ export class DbUserStore implements IUserStore {
             username,
             email,
             passwordHash,
+            provider,
+            providerUserId,
             createdAt: now,
             updatedAt: now,
         };
@@ -65,14 +67,16 @@ export class DbUserStore implements IUserStore {
         return Number(result.rows[0].count);
     }
 
-    private rowToUser(row: any): User {
+    private rowToUser(row: Record<string, unknown>): User {
         return {
-            id: row.id,
-            username: row.username,
-            email: row.email,
-            passwordHash: row.password_hash,
-            createdAt: new Date(row.created_at),
-            updatedAt: new Date(row.updated_at),
+            id: row.id as string,
+            username: row.username as string,
+            email: row.email as string,
+            passwordHash: row.password_hash as string | null,
+            provider: (row.provider as string) || 'local',
+            providerUserId: (row.provider_user_id as string) || null,
+            createdAt: new Date(row.created_at as string),
+            updatedAt: new Date(row.updated_at as string),
         };
     }
 }

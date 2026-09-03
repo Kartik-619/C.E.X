@@ -5,12 +5,14 @@ export async function migrate(): Promise<void> {
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS users (
-            id            TEXT PRIMARY KEY,
-            username      TEXT NOT NULL,
-            email         TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            id              TEXT PRIMARY KEY,
+            username        TEXT NOT NULL,
+            email           TEXT NOT NULL UNIQUE,
+            password_hash   TEXT,
+            provider        TEXT NOT NULL DEFAULT 'local',
+            provider_user_id TEXT,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
     `);
 
