@@ -47,7 +47,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 // ─── Tests ──────────────────────────────────────────────────────────
 
 describe('E2E: API Endpoints', () => {
-    const BASE_URL = 'http://localhost:3000';
+    const BASE_URL = 'http://localhost:3010';
 
     // Check if server is running
     beforeAll(async () => {
