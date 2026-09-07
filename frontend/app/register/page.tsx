@@ -2,17 +2,23 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import { useAuth } from "@/context/UserContext";
 import { Button } from "@/components/ui/button/Button";
+import { Input } from "@/components/ui/input/Input";
 import { getOAuthProviders } from "@/services/api";
+import { registerSchema, firstFieldErrors } from "@/utils/schemas";
 
 export default function RegisterPage() {
   const { register, loginWithOAuth } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [oauthProviders, setOauthProviders] = useState<string[]>([]);
 
@@ -22,26 +28,35 @@ export default function RegisterPage() {
       .catch(() => {});
   }, []);
 
+  function clearFieldError(field: string) {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
+    const result = registerSchema.safeParse({ email, username, password, confirmPassword });
+    if (!result.success) {
+      setFieldErrors(firstFieldErrors(result.error));
       return;
     }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
+    setFieldErrors({});
 
     setSubmitting(true);
     try {
       await register(email, username, password);
-      window.location.href = "/dashboard";
+      toast.success(`Welcome to C.E.X, ${username}`);
+      router.push("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      const message = err instanceof Error ? err.message : "Registration failed";
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -131,76 +146,68 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
               {error}
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500"
-            />
-          </div>
+          <Input
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            value={email}
+            onChange={(v) => {
+              setEmail(v);
+              clearFieldError("email");
+            }}
+            error={fieldErrors.email}
+            className="py-2.5"
+          />
 
-          <div className="space-y-1.5">
-            <label htmlFor="username" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              required
-              autoComplete="username"
-              placeholder="alice"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500"
-            />
-          </div>
+          <Input
+            type="text"
+            label="Username"
+            placeholder="alice"
+            autoComplete="username"
+            value={username}
+            onChange={(v) => {
+              setUsername(v);
+              clearFieldError("username");
+            }}
+            error={fieldErrors.username}
+            className="py-2.5"
+          />
 
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              autoComplete="new-password"
-              placeholder="••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500"
-            />
-          </div>
+          <Input
+            type="password"
+            label="Password"
+            placeholder="••••••"
+            autoComplete="new-password"
+            value={password}
+            onChange={(v) => {
+              setPassword(v);
+              clearFieldError("password");
+            }}
+            error={fieldErrors.password}
+            className="py-2.5"
+          />
 
-          <div className="space-y-1.5">
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Confirm password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              required
-              autoComplete="new-password"
-              placeholder="••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500"
-            />
-          </div>
+          <Input
+            type="password"
+            label="Confirm password"
+            placeholder="••••••"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(v) => {
+              setConfirmPassword(v);
+              clearFieldError("confirmPassword");
+            }}
+            error={fieldErrors.confirmPassword}
+            className="py-2.5"
+          />
 
           <Button
             type="submit"

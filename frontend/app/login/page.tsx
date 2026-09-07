@@ -2,15 +2,21 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import { useAuth } from "@/context/UserContext";
 import { Button } from "@/components/ui/button/Button";
+import { Input } from "@/components/ui/input/Input";
 import { getOAuthProviders } from "@/services/api";
+import { loginSchema, firstFieldErrors } from "@/utils/schemas";
 
 export default function LoginPage() {
   const { login, loginWithOAuth } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [oauthProviders, setOauthProviders] = useState<string[]>([]);
 
@@ -20,15 +26,35 @@ export default function LoginPage() {
       .catch(() => {});
   }, []);
 
+  function clearFieldError(field: string) {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      setFieldErrors(firstFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
+
     setSubmitting(true);
     try {
       await login(email, password);
-      window.location.href = "/dashboard";
+      toast.success("Signed in successfully");
+      router.push("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const message = err instanceof Error ? err.message : "Login failed";
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -118,44 +144,40 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
               {error}
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500"
-            />
-          </div>
+          <Input
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            value={email}
+            onChange={(v) => {
+              setEmail(v);
+              clearFieldError("email");
+            }}
+            error={fieldErrors.email}
+            className="py-2.5"
+          />
 
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              placeholder="••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500"
-            />
-          </div>
+          <Input
+            type="password"
+            label="Password"
+            placeholder="••••••"
+            autoComplete="current-password"
+            value={password}
+            onChange={(v) => {
+              setPassword(v);
+              clearFieldError("password");
+            }}
+            error={fieldErrors.password}
+            className="py-2.5"
+          />
 
           <Button
             type="submit"

@@ -77,15 +77,15 @@ export class WebSocketBroadcaster {
     }
     private onOrderPending(data:any):void{
         console.log(`[WebSocket] Sending ORDER_Pending to user: ${data.userId}`);
-        this.wsServer.sendToUser(data.userId,EventType.ORDER_PENDING)
+        this.wsServer.sendToUser(data.userId,EventType.ORDER_PENDING,data)
     }
     private onOrderFailled(data:any):void{
-        this.wsServer.sendToUser(data.userId,EventType.ORDER_FAILED)
+        this.wsServer.sendToUser(data.userId,EventType.ORDER_FAILED,data)
     }
     private onOTPASK(data:any):void{
-        this.wsServer.sendToUser(data.userId,EventType.OTPASKED)
+        this.wsServer.sendToUser(data.userId,EventType.OTPASKED,data)
     }
     private onOTPFAIL(data:any):void{
-        this.wsServer.sendToUser(data.userId,EventType.OTPFAIL)
+        this.wsServer.sendToUser(data.userId,EventType.OTPFAIL,data)
     }
 }

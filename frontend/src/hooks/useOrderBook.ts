@@ -52,8 +52,8 @@ export function useOrderBook() {
 
     return () => {
       cancelled = true;
-      unsubscribe("ORDER_PLACED");
-      unsubscribe("ORDER_CANCELLED");
+      unsubscribe("ORDER_PLACED", handleUpdate);
+      unsubscribe("ORDER_CANCELLED", handleUpdate);
     };
   }, [refresh]);
 

@@ -11,9 +11,20 @@ export function useTradeHistory() {
 
   useEffect(() => {
     const handleTrade = (message: WSMessage) => {
+      if (message.type !== "TRADE_EXECUTED") return;
       const tradeMessage = message as WSTradeExecuted;
-      if (tradeMessage.type !== "TRADE_EXECUTED") return;
-      setTrades((prev) => [tradeMessage.trade, ...prev]);
+      const { data } = tradeMessage;
+      setTrades((prev) => [
+        {
+          id: data.tradeId,
+          price: data.price,
+          quantity: data.quantity,
+          side: "buy",
+          timestamp: String(data.timestamp),
+          orderId: String(data.buyOrderId),
+        },
+        ...prev,
+      ]);
     };
 
     subscribe("TRADE_EXECUTED", handleTrade);
@@ -21,7 +32,7 @@ export function useTradeHistory() {
     const timer = setTimeout(() => setLoading(false), 400);
 
     return () => {
-      unsubscribe("TRADE_EXECUTED");
+      unsubscribe("TRADE_EXECUTED", handleTrade);
       clearTimeout(timer);
     };
   }, []);

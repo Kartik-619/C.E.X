@@ -73,8 +73,20 @@ export function subscribe(eventType: WSEventType, callback: (message: WSMessage)
   }
 }
 
-export function unsubscribe(eventType: WSEventType): void {
-  listeners.delete(eventType);
+export function unsubscribe(
+  eventType: WSEventType,
+  callback?: (message: WSMessage) => void
+): void {
+  if (!callback) {
+    listeners.delete(eventType);
+    return;
+  }
+  const set = listeners.get(eventType);
+  if (!set) return;
+  set.delete(callback);
+  if (set.size === 0) {
+    listeners.delete(eventType);
+  }
 }
 
 export function sendOrderPlaced(message: WSOrderPlaced): void {

@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
+import { toast } from "react-toastify";
 import type { OrderRequest } from "@/types/api";
 import { useOrders } from "@/hooks/useOrders";
 import { Input } from "@/components/ui/input/Input";
-import { validateOrderRequest } from "@/utils/formatters";
+import { orderFormSchema, firstFieldErrors } from "@/utils/schemas";
 
 export interface OrderFormProps {
   userId: string;
@@ -31,42 +32,42 @@ export const OrderForm: React.FC<OrderFormProps> = ({ userId }) => {
     quantity: "",
     orderType: "LIMIT",
   });
-  const [formError, setFormError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
   const handleChange = (name: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [name]: value }));
-    setFormError(null);
+    setFieldErrors((prev) => {
+      if (!(name in prev)) return prev;
+      const next = { ...prev };
+      delete next[name as string];
+      return next;
+    });
   };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
+
+    const result = orderFormSchema.safeParse(form);
+    if (!result.success) {
+      setFieldErrors(firstFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
 
     const request: OrderRequest = {
       userId,
       symbol: form.symbol,
       side: form.side,
-      price: form.orderType === "MARKET" ? 0 : form.price ? parseFloat(form.price) : 0,
-      quantity: form.quantity ? parseFloat(form.quantity) : 0,
+      price: form.orderType === "MARKET" ? 0 : parseFloat(form.price),
+      quantity: parseFloat(form.quantity),
       type: form.orderType,
     };
 
-    const validationError = validateOrderRequest({
-      price: form.orderType === "MARKET" ? 1 : request.price,
-      quantity: request.quantity,
-      side: request.side,
-    });
-
-    if (validationError) {
-      setFormError(validationError);
-      return;
-    }
-
-    let result;
+    let orderResult;
     if (form.orderType === "MARKET") {
-      result = await placeMarketOrder(userId, form.symbol, form.side, request.quantity);
+      orderResult = await placeMarketOrder(userId, form.symbol, form.side, request.quantity);
     } else {
-      result = await placeLimitOrder(
+      orderResult = await placeLimitOrder(
         userId,
         form.symbol,
         form.side,
@@ -75,8 +76,11 @@ export const OrderForm: React.FC<OrderFormProps> = ({ userId }) => {
       );
     }
 
-    if (result) {
+    if (orderResult) {
       setForm((prev) => ({ ...prev, price: "", quantity: "" }));
+      const sideLabel = request.side === "buy" ? "Buy" : "Sell";
+      const orderLabel = form.orderType === "MARKET" ? "Market order" : "Limit order";
+      toast.success(`${sideLabel} ${orderLabel} placed`);
     }
   };
 
@@ -100,7 +104,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ userId }) => {
     <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="mb-4 text-base font-semibold">Place Order</h2>
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
         {/* Side selector */}
         <div className="flex gap-2">
           <button
@@ -127,6 +131,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ userId }) => {
           value={form.symbol}
           onChange={(v) => handleChange("symbol", v)}
           name="symbol"
+          error={fieldErrors.symbol}
         />
 
         {/* Order Type */}
@@ -154,6 +159,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ userId }) => {
             onChange={(v) => handleChange("price", v)}
             name="price"
             step="any"
+            error={fieldErrors.price}
           />
         )}
 
@@ -165,6 +171,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ userId }) => {
           onChange={(v) => handleChange("quantity", v)}
           name="quantity"
           step="any"
+          error={fieldErrors.quantity}
         />
 
         {/* Estimated value */}
@@ -177,10 +184,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ userId }) => {
           </div>
         )}
 
-        {(formError || error) && (
-          <p className="text-sm text-red-600 dark:text-red-400">
-            {formError || error}
-          </p>
+        {error && (
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         )}
 
         <button

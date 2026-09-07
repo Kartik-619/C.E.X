@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
+import { toast } from "react-toastify";
 import type { BalanceResponse } from "@/types/api";
 import { Input } from "@/components/ui/input/Input";
 import { Button } from "@/components/ui/button/Button";
+import { depositSchema, firstFieldErrors } from "@/utils/schemas";
 
 const PRESET_AMOUNTS = [100, 500, 1000, 5000];
 
@@ -15,32 +17,38 @@ interface DepositFormProps {
 
 export const DepositForm: React.FC<DepositFormProps> = ({ onDeposit, depositing, error }) => {
   const [amount, setAmount] = React.useState("");
-  const [formError, setFormError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
-    setSuccess(null);
 
-    const parsed = parseFloat(amount);
-    if (!amount || Number.isNaN(parsed) || parsed <= 0) {
-      setFormError("Enter an amount greater than 0");
+    const result = depositSchema.safeParse({ amount });
+    if (!result.success) {
+      setFieldErrors(firstFieldErrors(result.error));
       return;
     }
+    setFieldErrors({});
 
-    const result = await onDeposit(parsed, "USD");
-    if (result) {
+    const parsed = parseFloat(amount);
+    const depositResult = await onDeposit(parsed, "USD");
+    if (depositResult) {
       setAmount("");
-      setSuccess(
-        `Added ${parsed.toLocaleString("en-US", { style: "currency", currency: "USD" })} to your wallet`
-      );
+      const formatted = parsed.toLocaleString("en-US", { style: "currency", currency: "USD" });
+      toast.success(`Added ${formatted} to your wallet`);
     }
   };
 
   const handlePreset = (value: number) => {
-    setFormError(null);
-    setSuccess(null);
+    clearFieldError("amount");
     setAmount(value.toString());
   };
 
@@ -53,7 +61,7 @@ export const DepositForm: React.FC<DepositFormProps> = ({ onDeposit, depositing,
         </p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div className="grid grid-cols-4 gap-2">
           {PRESET_AMOUNTS.map((preset) => (
             <button
@@ -77,27 +85,18 @@ export const DepositForm: React.FC<DepositFormProps> = ({ onDeposit, depositing,
           label="Amount (USD)"
           placeholder="100.00"
           value={amount}
-          onChange={setAmount}
+          onChange={(v) => {
+            setAmount(v);
+            clearFieldError("amount");
+          }}
           disabled={depositing}
           min="0.01"
           step="0.01"
+          error={fieldErrors.amount}
         />
 
-        {formError && (
-          <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>
-        )}
-
-        {!formError && error && (
+        {!fieldErrors.amount && error && (
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        )}
-
-        {success && (
-          <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 dark:bg-emerald-900/20">
-            <svg className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
-            <p className="text-sm text-emerald-700 dark:text-emerald-300">{success}</p>
-          </div>
         )}
 
         <Button type="submit" disabled={depositing || !amount} className="w-full">
