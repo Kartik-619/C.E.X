@@ -13,6 +13,7 @@ export interface InputProps {
   min?: string;
   autoComplete?: string;
   error?: string;
+  suffix?: React.ReactNode;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -28,6 +29,7 @@ export const Input: React.FC<InputProps> = ({
   min,
   autoComplete,
   error,
+  suffix,
 }) => {
   const id = React.useId();
 
@@ -48,19 +50,26 @@ export const Input: React.FC<InputProps> = ({
           {label}
         </label>
       )}
-      <input
-        id={id}
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        name={name}
-        step={step}
-        min={min}
-        autoComplete={autoComplete}
-        className={`${baseClasses} ${borderClasses} ${className}`}
-      />
+      <div className="relative">
+        <input
+          id={id}
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          name={name}
+          step={step}
+          min={min}
+          autoComplete={autoComplete}
+          className={`${baseClasses} ${suffix ? "pr-10" : ""} ${borderClasses} ${className}`}
+        />
+        {suffix && (
+          <div className="absolute inset-y-0 right-0 flex items-center pr-2.5">
+            {suffix}
+          </div>
+        )}
+      </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
