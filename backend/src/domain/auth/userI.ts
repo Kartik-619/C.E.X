@@ -1,4 +1,3 @@
-import type { IWallet } from "../engine/interface/Iwallet";
 
 export interface User {
     id: string;

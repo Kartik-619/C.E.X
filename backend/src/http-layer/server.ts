@@ -19,9 +19,13 @@ import { closePool } from '../infra/db/connection';
 
 import { OrderService } from './service/order-service';
 import { AuthService } from './service/auth-service';
+import { EmailService } from './service/email-service';
+import { EmailJSProvider } from './service/emailjs.provider';
+import { OtpService } from './service/otp-service';
 import { OrderController } from './controllers/order-controller';
 import { AuthController } from './controllers/auth-controller';
 import { OAuthController } from './controllers/oauth-controller';
+import { OTPController } from './controllers/otp-controller';
 import { AuthMiddleware } from './middleware/auth-middleware';
 import { Routes } from './routes/index';
 import type { AppRouter } from './routes/route.interface';
@@ -31,6 +35,7 @@ import { WebsocketServer } from '../infra/ws/ws-server';
 import { WebSocketBroadcaster } from '../domain/events/ws-broadcast.orderbook';
 import { LoggerFactory } from '../infra/logging/logger.factory';
 import { LogLevel } from '../infra/logging/log-level';
+import { OTPService } from '../infra/auth/otp';
 
 const USE_DB = process.env.USE_DB === 'true';
 
@@ -73,18 +78,35 @@ const engine = new StandardEngine(orderBook, wallet, bus);
 const orderService = new OrderService(engine);
 const authService = new AuthService(userStore, walletStore);
 
-// 7. Controller Layer
+// 7. Email / OTP services
+const emailProvider = new EmailJSProvider({
+    serviceId: process.env.EMAIL_SERVICE_ID ?? '',
+    templateId: process.env.EMAIL_TEMPLATE_ID ?? '',
+    publicKey: process.env.EMAIL_PUBLIC_KEY ?? '',
+    privateKey: process.env.EMAIL_SERVICE_KEY,
+});
+const infraOtpService = new OTPService();
+const emailService = new EmailService(
+    emailProvider,
+    infraOtpService,
+    { fromName: process.env.EMAIL_FROM_NAME ?? 'CEX Support' },
+    logger,
+);
+const otpService = new OtpService(userStore, emailService);
+
+// 8. Controller Layer
 const orderController = new OrderController(orderService);
 const authController = new AuthController(authService);
 const oauthController = new OAuthController(authService);
+const otpController = new OTPController(otpService);
 
-// 8. Middleware
+// 9. Middleware
 const authMiddleware = new AuthMiddleware(authService);
 
-// 9. Routes
-const routes = new Routes(orderController, authController, oauthController);
+// 10. Routes
+const routes = new Routes(orderController, authController, oauthController, otpController);
 
-// 10. Create router adapter
+// 11. Create router adapter
 const router: AppRouter = {
     get: (path, handler) => {
         console.log(`GET ${path}`);
@@ -97,16 +119,16 @@ const router: AppRouter = {
     },
 };
 
-// 11. Register routes
+// 12. Register routes
 routes.register(router);
 
-// 12. Seed the database with test users
+// 13. Seed the database with test users
 await seedDatabase(walletStore);
 
-// 13. Protected route handler wrapper
+// 14. Protected route handler wrapper
 const requireAuth = authMiddleware.createHandler.bind(authMiddleware);
 
-// 14. Server with manual routing
+// 15. Server with manual routing
 const server = serve({
     port: 3010,
     async fetch(request: Request) {
@@ -148,6 +170,10 @@ const server = serve({
                 response = await authController.register(request);
             } else if (path === '/api/auth/login' && method === 'POST') {
                 response = await authController.login(request);
+            } else if (path === '/api/auth/otp/request' && method === 'POST') {
+                response = await otpController.requestOtp(request);
+            } else if (path === '/api/auth/otp/verify' && method === 'POST') {
+                response = await otpController.verifyOtp(request);
             } else if (path === '/api/auth/oauth' && method === 'GET') {
                 response = await oauthController.initiate(request);
             } else if (path === '/api/auth/oauth/callback' && method === 'GET') {
@@ -192,6 +218,8 @@ console.log(`Storage: ${USE_DB ? 'PostgreSQL' : 'In-Memory'}`);
 console.log(`Endpoints:`);
 console.log(`   POST   /api/auth/register          - Register a new user`);
 console.log(`   POST   /api/auth/login             - Login`);
+console.log(`   POST   /api/auth/otp/request      - Request OTP via email`);
+console.log(`   POST   /api/auth/otp/verify        - Verify OTP`);
 console.log(`   GET    /api/auth/oauth              - Initiate OAuth flow`);
 console.log(`   GET    /api/auth/oauth/callback     - OAuth callback`);
 console.log(`   GET    /api/auth/oauth/providers    - List configured OAuth providers`);

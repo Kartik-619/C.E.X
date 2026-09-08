@@ -3,11 +3,13 @@
 import type { AppRouter, RouteModule } from './route.interface';
 import type { AuthController } from '../controllers/auth-controller';
 import type { OAuthController } from '../controllers/oauth-controller';
+import type { OTPController } from '../controllers/otp-controller';
 
 export class AuthRoutes implements RouteModule {
     constructor(
         private authController: AuthController,
         private oauthController: OAuthController,
+        private otpController: OTPController,
     ) {}
 
     register(router: AppRouter): void {
@@ -17,6 +19,14 @@ export class AuthRoutes implements RouteModule {
 
         router.post('/api/auth/login', (req: Request) =>
             this.authController.login(req)
+        );
+
+        router.post('/api/auth/otp/request', (req: Request) =>
+            this.otpController.requestOtp(req)
+        );
+
+        router.post('/api/auth/otp/verify', (req: Request) =>
+            this.otpController.verifyOtp(req)
         );
 
         router.get('/api/auth/oauth', (req: Request) =>

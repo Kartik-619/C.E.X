@@ -1,29 +1,29 @@
-// src/application/services/OTPService.ts
+// src/infra/auth/otp.ts
 
 export class OTPService {
     private readonly OTP_LENGTH = 4;
     private readonly OTP_TTL = 5 * 60 * 1000; // 5 minutes
-    private otpStore: Map<string, { otp: string; expiresAt: number }>;
+    private readonly otpStore: Map<string, { otp: string; expiresAt: number }>;
     private cleanupInterval: NodeJS.Timeout | null = null;
+    private readonly logger: (level: string, message: string) => void;
 
-    constructor() {
+    constructor(logger?: (level: string, message: string) => void) {
         this.otpStore = new Map();
+        this.logger =
+            logger ??
+            ((level, message) => console.log(`[OTP] ${level}: ${message}`));
         this.startCleanup();
     }
 
-   
     async generateOTP(userId: string): Promise<string> {
         if (!userId) {
             throw new Error('User ID is required');
         }
 
-        // Generate OTP
         const otp = this.createOTP(this.OTP_LENGTH);
         const expiresAt = Date.now() + this.OTP_TTL;
 
         this.otpStore.set(userId, { otp, expiresAt });
-
-        console.log(`[OTP] Generated for ${userId}: ${otp} (expires in 5 min)`);
 
         return otp;
     }
@@ -82,18 +82,11 @@ export class OTPService {
     }
 
    
-    private createOTP(length:number) {
-        let OTPARR: [number] = [Math.floor(Math.random() * 10)];
-        let i = 0;
-        let otpString: string = "";
-        while (i < length) {
-            let randomNum = Math.floor(Math.random() * 10)
-            OTPARR.push(randomNum);
-            let r = String(OTPARR.pop());
-            otpString += r;
-            i++;
+    private createOTP(length: number): string {
+        let otpString = '';
+        for (let i = 0; i < length; i++) {
+            otpString += Math.floor(Math.random() * 10).toString();
         }
-        console.log(otpString)
         return otpString;
     }
 
@@ -110,7 +103,7 @@ export class OTPService {
         }
 
         if (deleted > 0) {
-            console.log(`[OTP] Cleaned up ${deleted} expired OTPs`);
+            this.logger('INFO', `Cleaned up ${deleted} expired OTPs`);
         }
     }
 

@@ -17,6 +17,7 @@
   "dependencies": {
     "@elysia/cors": "^1.4.2",
     "@elysia/jwt": "^1.4.2",
+    "@emailjs/browser": "^4.4.1",
     "bcrypt": "^6.0.0",
     "elysia": "^1.4.29",
     "jsonwebtoken": "^9.0.3",

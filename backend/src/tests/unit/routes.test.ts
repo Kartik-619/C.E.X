@@ -9,11 +9,13 @@ import type { AppRouter } from '../../http-layer/routes/route.interface';
 import type { OrderController } from '../../http-layer/controllers/order-controller';
 import type { AuthController } from '../../http-layer/controllers/auth-controller';
 import type { OAuthController } from '../../http-layer/controllers/oauth-controller';
+import type { OTPController } from '../../http-layer/controllers/otp-controller';
 
 describe('Routes', () => {
     let mockOrderController: OrderController;
     let mockAuthController: AuthController;
     let mockOAuthController: OAuthController;
+    let mockOTPController: OTPController;
     let routes: Routes;
     let mockRouter: AppRouter;
 
@@ -21,7 +23,8 @@ describe('Routes', () => {
         mockOrderController = {} as OrderController;
         mockAuthController = {} as AuthController;
         mockOAuthController = {} as OAuthController;
-        routes = new Routes(mockOrderController, mockAuthController, mockOAuthController);
+        mockOTPController = {} as OTPController;
+        routes = new Routes(mockOrderController, mockAuthController, mockOAuthController, mockOTPController);
         mockRouter = {
             get: mock(() => {}),
             post: mock(() => {}),
@@ -57,6 +60,19 @@ describe('Routes', () => {
             );
             expect(mockRouter.post).toHaveBeenCalledWith(
                 '/api/auth/login',
+                expect.any(Function)
+            );
+        });
+
+        it('should register OTP routes', () => {
+            routes.register(mockRouter);
+
+            expect(mockRouter.post).toHaveBeenCalledWith(
+                '/api/auth/otp/request',
+                expect.any(Function)
+            );
+            expect(mockRouter.post).toHaveBeenCalledWith(
+                '/api/auth/otp/verify',
                 expect.any(Function)
             );
         });

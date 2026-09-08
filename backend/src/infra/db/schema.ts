@@ -64,5 +64,4 @@ export async function migrate(): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_trades_seller ON trades (seller_id);
     `);
 
-    console.log('✅ Database migration complete');
 }
