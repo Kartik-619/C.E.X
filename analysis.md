@@ -94,7 +94,7 @@
 - [ ] Implement a real `FileLogger` (or `pino`/`winston`-style) and replace `console.log` in the WS broadcaster — estate dependency injectable logger interface.
 - [x] Unify `tradeId` type (`string`) across engine events and payloads.
 - [ ] Add rate limiting / request-body validation on auth + deposit + order routes.
-- [ ] Add input sanitization on order quantity/price bounds server-side (not just zod client-side).
+- [x] Add input sanitization on order quantity/price bounds server-side (not just zod client-side).
 
 ### Improve the matching engine & market depth
 - [ ] Market orders with slippage / best-effort fill semantics and dedicated `MARKET` handling tests.

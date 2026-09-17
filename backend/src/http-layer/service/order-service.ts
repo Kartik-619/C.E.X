@@ -6,6 +6,7 @@ import type { Order } from "../../domain/engine/interface/IOrderBook";
 import { BalanceResponseDTO } from "../dto/balance-response.dto";
 import type { DepositRequestDTO } from "../dto/deposit-request.dto";
 import { OrderBookSnapshotDTO, OrderBookLevelDTO } from "../dto/orderbook-response.dto";
+import { MIN_ORDER_PRICE, MAX_ORDER_PRICE, MAX_ORDER_QUANTITY, MAX_DEPOSIT_AMOUNT } from '../dto/order-limits';
 
 import { LoggerFactory } from "../../infra/logging/logger.factory";
 import { LogLevel } from "../../infra/logging/log-level";
@@ -89,8 +90,15 @@ export class OrderService {
         if (!dto.asset) {
             throw new Error('Asset is required');
         }
+        if (typeof dto.amount !== 'number' || !Number.isFinite(dto.amount)) {
+            throw new Error('Amount must be a valid number');
+        }
         if (dto.amount <= 0) {
             throw new Error('Amount must be greater than 0');
+        }
+        if (dto.amount > MAX_DEPOSIT_AMOUNT) {
+            this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Amount exceeds max of ${MAX_DEPOSIT_AMOUNT} (User: ${dto.userId})`);
+            throw new Error(`Amount cannot exceed ${MAX_DEPOSIT_AMOUNT}`);
         }
 
         const hasWallet = await this.engine.hasWallet(dto.userId);
@@ -139,27 +147,48 @@ export class OrderService {
     // ─── Private Helpers ────────────────────────────────────────────
 
     private validateBusinessRules(dto: CreateOrderRequestDTO): void {
+        // Price bounds
+        if (typeof dto.price !== 'number' || !Number.isFinite(dto.price)) {
+            this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Price is not a valid number (User: ${dto.userId})`);
+            throw new Error('Price must be a valid number');
+        }
         if (dto.price <= 0) {
             this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Price must be > 0 (User: ${dto.userId})`);
             throw new Error('Price must be greater than 0');
+        }
+        if (dto.price > MAX_ORDER_PRICE) {
+            this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Price exceeds max limit of ${MAX_ORDER_PRICE} (User: ${dto.userId})`);
+            throw new Error(`Price cannot exceed ${MAX_ORDER_PRICE}`);
+        }
+        if (dto.price < MIN_ORDER_PRICE) {
+            this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Price below min limit of ${MIN_ORDER_PRICE} (User: ${dto.userId})`);
+            throw new Error(`Price cannot be less than ${MIN_ORDER_PRICE}`);
+        }
+
+        // Quantity bounds
+        if (typeof dto.quantity !== 'number' || !Number.isFinite(dto.quantity)) {
+            this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Quantity is not a valid number (User: ${dto.userId})`);
+            throw new Error('Quantity must be a valid number');
         }
         if (dto.quantity <= 0) {
             this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Quantity must be > 0 (User: ${dto.userId})`);
             throw new Error('Quantity must be greater than 0');
         }
+        if (dto.quantity > MAX_ORDER_QUANTITY) {
+            this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Quantity exceeds max limit of ${MAX_ORDER_QUANTITY} (User: ${dto.userId})`);
+            throw new Error(`Quantity cannot exceed ${MAX_ORDER_QUANTITY}`);
+        }
+
+        // Order type
+        if (dto.type !== 'LIMIT' && dto.type !== 'MARKET') {
+            this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Invalid order type '${dto.type}' (User: ${dto.userId})`);
+            throw new Error('Order type must be LIMIT or MARKET');
+        }
+
+        // Symbol format
         if (!dto.symbol || !dto.symbol.includes('/')) {
             this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Invalid symbol format '${dto.symbol}'`);
             throw new Error('Invalid symbol format. Expected: BTC/USD');
-        }
-
-        if (dto.quantity > 100) {
-            this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Quantity exceeds max limit of 100 (User: ${dto.userId})`);
-            throw new Error('Quantity cannot exceed 100');
-        }
-
-        if (dto.price < 0.01) {
-            this.logger.log(LogLevel.WARN, `[OrderService] Validation failed: Price below min limit of 0.01 (User: ${dto.userId})`);
-            throw new Error('Price cannot be less than 0.01');
         }
     }
 

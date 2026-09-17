@@ -135,6 +135,22 @@ describe("orderFormSchema", () => {
       expect(firstFieldErrors(result.error).quantity).toBe("Quantity must be greater than 0");
     }
   });
+
+  it("rejects a quantity above the maximum bound", () => {
+    const result = orderFormSchema.safeParse({ ...validLimit, quantity: "101" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(firstFieldErrors(result.error).quantity).toBe("Quantity exceeds maximum");
+    }
+  });
+
+  it("rejects a limit price below the minimum bound", () => {
+    const result = orderFormSchema.safeParse({ ...validLimit, price: "0.005" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(firstFieldErrors(result.error).price).toBe("Price cannot be less than 0.01");
+    }
+  });
 });
 
 describe("depositSchema", () => {

@@ -23,6 +23,8 @@ describe('OrderService', () => {
                 available: 1000,
                 locked: 0
             })),
+            hasWallet: mock(async (userId: string) => true),
+            deposit: mock(async (userId: string, asset: string, amount: number) => {}),
             getOrderBook: mock(async () => [
                 { orderId: 1, side: 'buy', price: 100, quantity: 2, userId: 'alice', symbol: 'BTC/USD', type: 'LIMIT', createdAt: 1 },
                 { orderId: 2, side: 'buy', price: 101, quantity: 3, userId: 'alice', symbol: 'BTC/USD', type: 'LIMIT', createdAt: 2 },
@@ -118,6 +120,78 @@ describe('OrderService', () => {
             // If it doesn't throw, validation passed
             expect(true).toBe(true);
         });
+
+        it('should reject a non-numeric price', async () => {
+            const dto: CreateOrderRequestDTO = {
+                userId: 'alice', symbol: 'BTC/USD', side: 'buy',
+                price: Number.NaN, quantity: 1, type: 'LIMIT'
+            };
+
+            await expect(orderService.placeOrder(dto)).rejects.toThrow('Price must be a valid number');
+        });
+
+        it('should reject an infinite price', async () => {
+            const dto: CreateOrderRequestDTO = {
+                userId: 'alice', symbol: 'BTC/USD', side: 'buy',
+                price: Infinity, quantity: 1, type: 'LIMIT'
+            };
+
+            await expect(orderService.placeOrder(dto)).rejects.toThrow('Price must be a valid number');
+        });
+
+        it('should reject a price above the maximum bound', async () => {
+            const dto: CreateOrderRequestDTO = {
+                userId: 'alice', symbol: 'BTC/USD', side: 'buy',
+                price: 1000001, quantity: 1, type: 'LIMIT'
+            };
+
+            await expect(orderService.placeOrder(dto)).rejects.toThrow('Price cannot exceed 1000000');
+        });
+
+        it('should reject a price below the minimum bound', async () => {
+            const dto: CreateOrderRequestDTO = {
+                userId: 'alice', symbol: 'BTC/USD', side: 'buy',
+                price: 0.001, quantity: 1, type: 'LIMIT'
+            };
+
+            await expect(orderService.placeOrder(dto)).rejects.toThrow('Price cannot be less than 0.01');
+        });
+
+        it('should reject a non-numeric quantity', async () => {
+            const dto: CreateOrderRequestDTO = {
+                userId: 'alice', symbol: 'BTC/USD', side: 'buy',
+                price: 100, quantity: Number.NaN, type: 'LIMIT'
+            };
+
+            await expect(orderService.placeOrder(dto)).rejects.toThrow('Quantity must be a valid number');
+        });
+
+        it('should reject an infinite quantity', async () => {
+            const dto: CreateOrderRequestDTO = {
+                userId: 'alice', symbol: 'BTC/USD', side: 'buy',
+                price: 100, quantity: Infinity, type: 'LIMIT'
+            };
+
+            await expect(orderService.placeOrder(dto)).rejects.toThrow('Quantity must be a valid number');
+        });
+
+        it('should reject a quantity above the maximum bound', async () => {
+            const dto: CreateOrderRequestDTO = {
+                userId: 'alice', symbol: 'BTC/USD', side: 'buy',
+                price: 100, quantity: 101, type: 'LIMIT'
+            };
+
+            await expect(orderService.placeOrder(dto)).rejects.toThrow('Quantity cannot exceed 100');
+        });
+
+        it('should reject an unsupported order type', async () => {
+            const dto: CreateOrderRequestDTO = {
+                userId: 'alice', symbol: 'BTC/USD', side: 'buy',
+                price: 100, quantity: 1, type: 'STOP' as any
+            };
+
+            await expect(orderService.placeOrder(dto)).rejects.toThrow('Order type must be LIMIT or MARKET');
+        });
     });
 
     describe('addOrder', () => {
@@ -138,6 +212,35 @@ it('should add order without matching', async () => {
     expect(result).toHaveProperty('id');
     expect(result.userId).toBe('alice');
 });
+    });
+
+    describe('deposit', () => {
+        it('should call engine.deposit for a valid deposit', async () => {
+            const result = await orderService.deposit({ userId: 'alice', asset: 'USD', amount: 500 });
+
+            expect(mockEngine.deposit).toHaveBeenCalledWith('alice', 'USD', 500);
+            expect(result).toHaveProperty('available');
+        });
+
+        it('should reject a non-numeric amount', async () => {
+            await expect(orderService.deposit({ userId: 'alice', asset: 'USD', amount: Number.NaN }))
+                .rejects.toThrow('Amount must be a valid number');
+        });
+
+        it('should reject an infinite amount', async () => {
+            await expect(orderService.deposit({ userId: 'alice', asset: 'USD', amount: Infinity }))
+                .rejects.toThrow('Amount must be a valid number');
+        });
+
+        it('should reject a non-positive amount', async () => {
+            await expect(orderService.deposit({ userId: 'alice', asset: 'USD', amount: 0 }))
+                .rejects.toThrow('Amount must be greater than 0');
+        });
+
+        it('should reject an amount above the maximum bound', async () => {
+            await expect(orderService.deposit({ userId: 'alice', asset: 'USD', amount: 1000001 }))
+                .rejects.toThrow('Amount cannot exceed 1000000');
+        });
     });
 
     describe('cancelOrder', () => {

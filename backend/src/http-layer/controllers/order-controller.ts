@@ -3,6 +3,7 @@
 import type { OrderService } from '../service/order-service';
 import type { CreateOrderRequestDTO, CancelOrderRequestDTO } from '../dto/requestorderDTO';
 import type { DepositRequestDTO } from '../dto/deposit-request.dto';
+import { MIN_ORDER_PRICE, MAX_ORDER_PRICE, MAX_ORDER_QUANTITY, MAX_DEPOSIT_AMOUNT } from '../dto/order-limits';
 import type { AuthContext } from '../middleware/auth-middleware';
 
 import { LoggerFactory } from "../../infra/logging/logger.factory"; 
@@ -173,8 +174,14 @@ export class OrderController {
             if (dto.userId !== auth.user.id) {
                 return this.errorResponse('Cannot deposit to another user\'s wallet', 403);
             }
-            if (dto.amount <= 0 || Number.isNaN(dto.amount)) {
+            if (typeof dto.amount !== 'number' || !Number.isFinite(dto.amount)) {
+                return this.errorResponse('Amount must be a valid number', 400);
+            }
+            if (dto.amount <= 0) {
                 return this.errorResponse('Amount must be greater than 0', 400);
+            }
+            if (dto.amount > MAX_DEPOSIT_AMOUNT) {
+                return this.errorResponse(`Amount cannot exceed ${MAX_DEPOSIT_AMOUNT}`, 400);
             }
 
             const balance = await this.orderService.deposit(dto);
@@ -223,9 +230,22 @@ export class OrderController {
     private validateCreateOrder(dto: CreateOrderRequestDTO): void {
         if (!dto.userId) throw new Error('User ID is required');
         if (!dto.symbol) throw new Error('Symbol is required');
-        if (dto.price <= 0) throw new Error('Price must be greater than 0');
-        if (dto.quantity <= 0) throw new Error('Quantity must be greater than 0');
         if (dto.side !== 'buy' && dto.side !== 'sell') throw new Error('Side must be "buy" or "sell"');
+
+        if (typeof dto.price !== 'number' || !Number.isFinite(dto.price)) {
+            throw new Error('Price must be a valid number');
+        }
+        if (dto.price <= 0) throw new Error('Price must be greater than 0');
+        if (dto.price > MAX_ORDER_PRICE) throw new Error(`Price cannot exceed ${MAX_ORDER_PRICE}`);
+        if (dto.price < MIN_ORDER_PRICE) throw new Error(`Price cannot be less than ${MIN_ORDER_PRICE}`);
+
+        if (typeof dto.quantity !== 'number' || !Number.isFinite(dto.quantity)) {
+            throw new Error('Quantity must be a valid number');
+        }
+        if (dto.quantity <= 0) throw new Error('Quantity must be greater than 0');
+        if (dto.quantity > MAX_ORDER_QUANTITY) throw new Error(`Quantity cannot exceed ${MAX_ORDER_QUANTITY}`);
+
+        if (dto.type !== 'LIMIT' && dto.type !== 'MARKET') throw new Error('Order type must be LIMIT or MARKET');
     }
 
     // ─── Response Helpers ──────────────────────────────────────────
@@ -243,7 +263,14 @@ export class OrderController {
     private errorResponse(error: any, status?: number): Response {
         const message = error.message || error || 'Internal server error';
         // Use provided status or determine from message
-        const statusCode = status || (message.includes('required') || message.includes('must be') ? 400 : 500);
+        const statusCode = status || (
+            message.includes('required') ||
+            message.includes('must be') ||
+            message.includes('cannot') ||
+            message.includes('Invalid')
+            ? 400
+            : 500
+        );
         
         // Log the error response being sent to the client
         this.logger.log(statusCode >= 500 ? LogLevel.ERROR : LogLevel.WARN, `[OrderController] Sending error response: ${message} (Status: ${statusCode})`);

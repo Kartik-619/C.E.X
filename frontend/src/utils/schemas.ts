@@ -1,7 +1,8 @@
 import { z } from "zod";
 
+export const MIN_ORDER_PRICE = 0.01;
 export const MAX_ORDER_PRICE = 1000000;
-export const MAX_ORDER_QUANTITY = 1000000;
+export const MAX_ORDER_QUANTITY = 100;
 export const MAX_DEPOSIT_AMOUNT = 1000000;
 
 export const loginSchema = z.object({
@@ -51,6 +52,12 @@ export const orderFormSchema = z
         ctx.addIssue({
           code: "custom",
           message: "Price must be greater than 0",
+          path: ["price"],
+        });
+      } else if (price < MIN_ORDER_PRICE) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Price cannot be less than ${MIN_ORDER_PRICE}`,
           path: ["price"],
         });
       } else if (price > MAX_ORDER_PRICE) {

@@ -154,6 +154,81 @@ describe('OrderController', () => {
             expect(data.error).toContain('Price must be greater than 0');
         });
 
+        it('should return 400 when price is non-numeric', async () => {
+            const request = new Request('http://localhost/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: 'alice',
+                    symbol: 'BTC/USD',
+                    side: 'buy',
+                    price: 'not-a-number',
+                    quantity: 1
+                })
+            });
+
+            const response = await controller.placeOrder(request);
+            const data = await parseResponse<ErrorResponse>(response);
+
+            expect(response.status).toBe(400);
+            expect(data.error).toContain('valid number');
+        });
+
+        it('should return 400 when price exceeds the maximum bound', async () => {
+            const request = new Request('http://localhost/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: 'alice',
+                    symbol: 'BTC/USD',
+                    side: 'buy',
+                    price: 1000001,
+                    quantity: 1
+                })
+            });
+
+            const response = await controller.placeOrder(request);
+            expect(response.status).toBe(400);
+        });
+
+        it('should return 400 when quantity exceeds the maximum bound', async () => {
+            const request = new Request('http://localhost/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: 'alice',
+                    symbol: 'BTC/USD',
+                    side: 'buy',
+                    price: 100,
+                    quantity: 101
+                })
+            });
+
+            const response = await controller.placeOrder(request);
+            expect(response.status).toBe(400);
+        });
+
+        it('should return 400 when order type is invalid', async () => {
+            const request = new Request('http://localhost/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: 'alice',
+                    symbol: 'BTC/USD',
+                    side: 'buy',
+                    price: 100,
+                    quantity: 1,
+                    type: 'STOP'
+                })
+            });
+
+            const response = await controller.placeOrder(request);
+            const data = await parseResponse<ErrorResponse>(response);
+
+            expect(response.status).toBe(400);
+            expect(data.error).toContain('LIMIT or MARKET');
+        });
+
         it('should handle invalid JSON gracefully', async () => {
             const request = new Request('http://localhost/api/orders', {
                 method: 'POST',
@@ -323,6 +398,28 @@ describe('OrderController', () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: 'alice', asset: 'USD', amount: -10 })
+            });
+
+            const response = await controller.deposit(request, auth);
+            expect(response.status).toBe(400);
+        });
+
+        it('should reject a non-numeric amount', async () => {
+            const request = new Request('http://localhost/api/balance/deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: 'alice', asset: 'USD', amount: 'abc' })
+            });
+
+            const response = await controller.deposit(request, auth);
+            expect(response.status).toBe(400);
+        });
+
+        it('should reject an amount above the maximum bound', async () => {
+            const request = new Request('http://localhost/api/balance/deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: 'alice', asset: 'USD', amount: 1000001 })
             });
 
             const response = await controller.deposit(request, auth);
