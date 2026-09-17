@@ -55,21 +55,21 @@ if (USE_DB) {
     userStore = new DbUserStore();
 } else {
     logger.log(LogLevel.INFO, '[Server] Using in-memory stores');
-    orderBookStore = new inmemory_OrderBookStore();
+    orderBookStore = new inmemory_OrderBookStore(logger);
     walletStore = new Inmemory_WalletStore();
     userStore = new Inmemory_User();
 }
 
-const orderBook = new OrderBook(orderBookStore);
+const orderBook = new OrderBook(orderBookStore, logger);
 const wallet = new Wallet(walletStore);
-const bus = new EventManager();
+const bus = new EventManager(logger);
 
 // 3. Create WebSocket Server
 const wsServer = new WebsocketServer(3011, logger);
 wsServer.start();
 
 // 4. Create WebSocket Broadcaster (connects EventBus → WebSocket)
-const wsBroadcaster = new WebSocketBroadcaster(bus, wsServer);
+const wsBroadcaster = new WebSocketBroadcaster(bus, wsServer, logger);
 
 // 5. Create Engine with EventBus
 const engine = new StandardEngine(orderBook, wallet, bus);
@@ -85,7 +85,7 @@ const emailProvider = new EmailJSProvider({
     publicKey: process.env.EMAIL_PUBLIC_KEY ?? '',
     privateKey: process.env.EMAIL_SERVICE_KEY,
 });
-const infraOtpService = new OTPService();
+const infraOtpService = new OTPService(logger);
 const emailService = new EmailService(
     emailProvider,
     infraOtpService,
@@ -109,13 +109,13 @@ const routes = new Routes(orderController, authController, oauthController, otpC
 // 11. Create router adapter
 const router: AppRouter = {
     get: (path, handler) => {
-        console.log(`GET ${path}`);
+        logger.log(LogLevel.INFO, `[Router] Registered GET ${path}`);
     },
     post: (path, handler) => {
-        console.log(`POST ${path}`);
+        logger.log(LogLevel.INFO, `[Router] Registered POST ${path}`);
     },
     delete: (path, handler) => {
-        console.log(`DELETE ${path}`);
+        logger.log(LogLevel.INFO, `[Router] Registered DELETE ${path}`);
     },
 };
 
@@ -123,7 +123,7 @@ const router: AppRouter = {
 routes.register(router);
 
 // 13. Seed the database with test users
-await seedDatabase(walletStore);
+await seedDatabase(walletStore, logger);
 
 // 14. Protected route handler wrapper
 const requireAuth = authMiddleware.createHandler.bind(authMiddleware);
@@ -215,29 +215,29 @@ const server = serve({
     }
 });
 
-console.log(`Server running on http://localhost:${server.port}`);
-console.log(`Storage: ${USE_DB ? 'PostgreSQL' : 'In-Memory'}`);
-console.log(`Endpoints:`);
-console.log(`   POST   /api/auth/register          - Register a new user`);
-console.log(`   POST   /api/auth/login             - Login`);
-console.log(`   POST   /api/auth/otp/request      - Request OTP via email`);
-console.log(`   POST   /api/auth/otp/verify        - Verify OTP`);
-console.log(`   GET    /api/auth/oauth              - Initiate OAuth flow`);
-console.log(`   GET    /api/auth/oauth/callback     - OAuth callback`);
-console.log(`   GET    /api/auth/oauth/providers    - List configured OAuth providers`);
-console.log(`   POST   /api/orders                 - Place an order (auth)`);
-console.log(`   GET    /api/orders                  - List user's open orders (auth)`);
-console.log(`   POST   /api/orders/add             - Add order to book (auth)`);
-console.log(`   DELETE /api/orders                  - Cancel an order (auth)`);
-console.log(`   GET    /api/balance/:userId         - Get balance (auth)`);
-console.log(`   POST   /api/balance/deposit        - Deposit funds (auth)`);
-console.log(`   GET    /api/orderbook               - Get order book`);
-console.log(`   GET    /api/health                  - Health check`);
-console.log(`WebSocket running on ws://localhost:3011`);
+logger.log(LogLevel.INFO, `Server running on http://localhost:${server.port}`);
+logger.log(LogLevel.INFO, `Storage: ${USE_DB ? 'PostgreSQL' : 'In-Memory'}`);
+logger.log(LogLevel.INFO, `Endpoints:`);
+logger.log(LogLevel.INFO, `   POST   /api/auth/register          - Register a new user`);
+logger.log(LogLevel.INFO, `   POST   /api/auth/login             - Login`);
+logger.log(LogLevel.INFO, `   POST   /api/auth/otp/request      - Request OTP via email`);
+logger.log(LogLevel.INFO, `   POST   /api/auth/otp/verify        - Verify OTP`);
+logger.log(LogLevel.INFO, `   GET    /api/auth/oauth              - Initiate OAuth flow`);
+logger.log(LogLevel.INFO, `   GET    /api/auth/oauth/callback     - OAuth callback`);
+logger.log(LogLevel.INFO, `   GET    /api/auth/oauth/providers    - List configured OAuth providers`);
+logger.log(LogLevel.INFO, `   POST   /api/orders                 - Place an order (auth)`);
+logger.log(LogLevel.INFO, `   GET    /api/orders                  - List user's open orders (auth)`);
+logger.log(LogLevel.INFO, `   POST   /api/orders/add             - Add order to book (auth)`);
+logger.log(LogLevel.INFO, `   DELETE /api/orders                  - Cancel an order (auth)`);
+logger.log(LogLevel.INFO, `   GET    /api/balance/:userId         - Get balance (auth)`);
+logger.log(LogLevel.INFO, `   POST   /api/balance/deposit        - Deposit funds (auth)`);
+logger.log(LogLevel.INFO, `   GET    /api/orderbook               - Get order book`);
+logger.log(LogLevel.INFO, `   GET    /api/health                  - Health check`);
+logger.log(LogLevel.INFO, `WebSocket running on ws://localhost:3011`);
 
 // Graceful shutdown
 const shutdown = async () => {
-    console.log('\nShutting down...');
+    logger.log(LogLevel.INFO, 'Shutting down...');
     wsServer.stop();
     server.stop();
     if (USE_DB) {

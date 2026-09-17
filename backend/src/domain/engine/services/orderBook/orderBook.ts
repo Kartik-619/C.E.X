@@ -1,10 +1,14 @@
 import type { Order, IOrderBook } from "../../interface/IOrderBook";
+import { Logger } from "../../../../infra/logging/logger";
+import { LogLevel } from "../../../../infra/logging/log-level";
 
 export class OrderBook implements IOrderBook {
     private store: IOrderBook;
+    private readonly logger?: Logger;
 
-    constructor(store: IOrderBook) {
+    constructor(store: IOrderBook, logger?: Logger) {
         this.store = store;
+        this.logger = logger;
     }
 
     async placeOrder(order: Order): Promise<Order> {
@@ -12,12 +16,12 @@ export class OrderBook implements IOrderBook {
             throw new Error("Invalid price");
         }
 
-        console.log("[OrderBook] Processing order placement...");
+        this.logger?.log(LogLevel.DEBUG, "[OrderBook] Processing order placement...");
         return await this.store.placeOrder(order);
     }
 
     async cancelOrder(orderId: number): Promise<void> {
-        console.log("[OrderBook] Processing order cancellation...");
+        this.logger?.log(LogLevel.DEBUG, "[OrderBook] Processing order cancellation...");
         await this.store.cancelOrder(orderId);
     }
 
@@ -26,12 +30,12 @@ export class OrderBook implements IOrderBook {
         if (!order) {
             throw new Error(" Not found")
         }
-        console.log("[OrderBook] Processing order update...");
+        this.logger?.log(LogLevel.DEBUG, "[OrderBook] Processing order update...");
         return await this.store.updateOrder(orderId, quantity);
     }
 
     async getOrder(orderId: number): Promise<Order | null> {
-        console.log("[OrderBook] Getting order...");
+        this.logger?.log(LogLevel.DEBUG, "[OrderBook] Getting order...");
         return await this.store.getOrder(orderId);
     }
 
@@ -48,7 +52,7 @@ export class OrderBook implements IOrderBook {
     }
 
     async findBestMatch(order: Order): Promise<Order | null> {
-        console.log("[OrderBook] Finding best match...");
+        this.logger?.log(LogLevel.DEBUG, "[OrderBook] Finding best match...");
         return await this.store.findBestMatch(order);
     }
 
@@ -80,7 +84,7 @@ export class OrderBook implements IOrderBook {
     }
 
     async atomicMatch(order: Order, quantity: number): Promise<Order | null> {
-        console.log("[OrderBook] Atomic matching...");
+        this.logger?.log(LogLevel.DEBUG, "[OrderBook] Atomic matching...");
         return await this.store.atomicMatch(order, quantity);
     }
 }

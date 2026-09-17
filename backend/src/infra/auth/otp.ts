@@ -1,17 +1,19 @@
 // src/infra/auth/otp.ts
 
+import { Logger } from '../logging/logger';
+import { LoggerFactory } from '../logging/logger.factory';
+import { LogLevel } from '../logging/log-level';
+
 export class OTPService {
     private readonly OTP_LENGTH = 4;
     private readonly OTP_TTL = 5 * 60 * 1000; // 5 minutes
     private readonly otpStore: Map<string, { otp: string; expiresAt: number }>;
     private cleanupInterval: NodeJS.Timeout | null = null;
-    private readonly logger: (level: string, message: string) => void;
+    private readonly logger: Logger;
 
-    constructor(logger?: (level: string, message: string) => void) {
+    constructor(logger?: Logger) {
         this.otpStore = new Map();
-        this.logger =
-            logger ??
-            ((level, message) => console.log(`[OTP] ${level}: ${message}`));
+        this.logger = logger ?? LoggerFactory.createLogger('console', LogLevel.INFO);
         this.startCleanup();
     }
 
@@ -24,6 +26,8 @@ export class OTPService {
         const expiresAt = Date.now() + this.OTP_TTL;
 
         this.otpStore.set(userId, { otp, expiresAt });
+
+        this.logger.log(LogLevel.INFO, `[OTPService] Generated OTP for user: ${userId}`);
 
         return otp;
     }
@@ -41,19 +45,23 @@ export class OTPService {
         const stored = this.otpStore.get(userId);
 
         if (!stored) {
+            this.logger.log(LogLevel.WARN, `[OTPService] OTP verification failed for unknown user: ${userId}`);
             return false;
         }
 
         if (Date.now() > stored.expiresAt) {
             this.otpStore.delete(userId); // Clean up expired OTP
+            this.logger.log(LogLevel.WARN, `[OTPService] OTP verification failed: expired code for user: ${userId}`);
             return false;
         }
 
         if (stored.otp !== code) {
+            this.logger.log(LogLevel.WARN, `[OTPService] OTP verification failed: mismatch for user: ${userId}`);
             return false;
         }
 
         this.otpStore.delete(userId);
+        this.logger.log(LogLevel.INFO, `[OTPService] OTP verified for user: ${userId}`);
         return true;
     }
 
@@ -103,7 +111,7 @@ export class OTPService {
         }
 
         if (deleted > 0) {
-            this.logger('INFO', `Cleaned up ${deleted} expired OTPs`);
+            this.logger.log(LogLevel.INFO, `[OTPService] Cleaned up ${deleted} expired OTPs`);
         }
     }
 

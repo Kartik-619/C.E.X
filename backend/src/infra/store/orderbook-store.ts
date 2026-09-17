@@ -1,9 +1,16 @@
 import type { IOrderBook, Order } from "../../domain/engine/interface/IOrderBook";
+import { Logger } from "../logging/logger";
+import { LogLevel } from "../logging/log-level";
 
 export class inmemory_OrderBookStore implements IOrderBook {
     private orders = new Map<number, Order>();
     private asks: Order[] = [];
     private bids: Order[] = [];
+    private readonly logger?: Logger;
+
+    constructor(logger?: Logger) {
+        this.logger = logger;
+    }
 
     async placeOrder(order: Order): Promise<Order> {
         // Store the order
@@ -26,7 +33,7 @@ export class inmemory_OrderBookStore implements IOrderBook {
             });
         }
 
-        console.log("Adding order:", order);
+        this.logger?.log(LogLevel.DEBUG, `[OrderBookStore] Adding order: ${order.orderId}`);
         return order;
     }
 
@@ -37,7 +44,7 @@ export class inmemory_OrderBookStore implements IOrderBook {
             this.asks = this.asks.filter(o => o.orderId !== orderId);
             this.orders.delete(orderId);
 
-            console.log("Removing order:", orderId);
+            this.logger?.log(LogLevel.DEBUG, `[OrderBookStore] Removing order: ${orderId}`);
         }
         return Promise.resolve();
     }
