@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { OrderBook } from "./OrderBook";
 
 vi.mock("@/services/api", () => ({
@@ -55,5 +55,28 @@ describe("OrderBook", () => {
     render(<OrderBook />);
 
     expect(await screen.findByText(/failed to fetch order book/i)).toBeInTheDocument();
+  });
+
+  it("retries the request when the retry action is clicked", async () => {
+    mockedGetOrderBook.mockRejectedValueOnce(new Error("Failed to fetch order book"));
+    mockedGetOrderBook.mockResolvedValue(mockOrderBook);
+    render(<OrderBook />);
+
+    expect(await screen.findByText(/failed to fetch order book/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    expect(await screen.findByText(/48,000\.00/i)).toBeInTheDocument();
+  });
+
+  it("shows an empty state when the book has no bids or asks", async () => {
+    mockedGetOrderBook.mockResolvedValue({
+      bids: [],
+      asks: [],
+      reducedTotalBidQuantity: 0,
+      reducedTotalAskQuantity: 0,
+      timestamp: new Date().toISOString(),
+    });
+    render(<OrderBook />);
+
+    expect(await screen.findByText(/no orders in the market/i)).toBeInTheDocument();
   });
 });

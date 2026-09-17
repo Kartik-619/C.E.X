@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/header/Header";
 import { Sidebar } from "@/components/layout/sidebar/Sidebar";
 import { Badge } from "@/components/ui/badge/Badge";
 import { EmptyState } from "@/components/ui/empty-state/EmptyState";
+import { PageLoader } from "@/components/ui/page-loader/PageLoader";
 import { useActivityHistory } from "@/hooks/useActivityHistory";
 import { useWebSocketContext } from "@/context/WebSocketContext";
 import { useAuth } from "@/context/UserContext";
@@ -26,11 +27,7 @@ export default function HistoryPage() {
   }, [loading, user, router]);
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <div className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

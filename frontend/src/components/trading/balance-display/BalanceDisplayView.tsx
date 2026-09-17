@@ -3,6 +3,7 @@
 import React from "react";
 import type { BalanceResponse } from "@/types/api";
 import { Skeleton } from "@/components/ui/skeleton/Skeleton";
+import { ErrorState } from "@/components/ui/error-state/ErrorState";
 import { formatCurrency } from "@/utils/formatters";
 
 interface BalanceDisplayViewProps {
@@ -39,8 +40,13 @@ export const BalanceDisplayView: React.FC<BalanceDisplayViewProps> = ({
   if (error && !balance) {
     return (
       <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-base font-semibold">Account Balance</h2>
-        <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <h2 className="mb-4 text-base font-semibold">Account Balance</h2>
+        <ErrorState
+          title="Couldn't load your balance"
+          description={error}
+          retryLabel="Retry"
+          onRetry={refetch}
+        />
       </section>
     );
   }

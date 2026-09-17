@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/sidebar/Sidebar";
 import { BalanceDisplayView } from "@/components/trading/balance-display/BalanceDisplayView";
 import { DepositForm } from "@/components/trading/deposit-form/DepositForm";
 import { Skeleton } from "@/components/ui/skeleton/Skeleton";
+import { PageLoader } from "@/components/ui/page-loader/PageLoader";
 import { useBalance } from "@/hooks/useBalance";
 import { useWebSocketContext } from "@/context/WebSocketContext";
 import { useAuth } from "@/context/UserContext";
@@ -28,11 +29,7 @@ export default function Wallet() {
   }, [loading, user, router]);
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <div className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

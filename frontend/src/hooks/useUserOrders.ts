@@ -117,6 +117,20 @@ export function useUserOrders(userId: string | null) {
       unsubscribe("ORDER_CANCELLED", removeOrder);
       unsubscribe("ORDER_FILLED", removeOrder);
     };
+    }, [userId]);
+
+  const refetch = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getUserOrders();
+      setOrders(data.map(toUserOrder));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to fetch orders");
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
 
   const cancelOrder = useCallback(async (orderId: string): Promise<boolean> => {
@@ -134,5 +148,5 @@ export function useUserOrders(userId: string | null) {
     }
   }, []);
 
-  return { orders, loading, error, cancellingId, cancelOrder };
+  return { orders, loading, error, cancellingId, cancelOrder, refetch };
 }

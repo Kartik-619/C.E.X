@@ -113,7 +113,7 @@
 - [x] Kill the `DEFAULT_USER_ID = "alice"` hack — use the logged-in user's id everywhere.
 - [x] Fix `TradeHistory` side from data; add `Orders`, `History`, `Settings` pages (links currently all → `/dashboard`).
 - [ ] Candlestick/price chart component (e.g., lightweight-charts) fed by WS ticks.
-- [ ] Empty/loading/error states polish; skeleton + toast behavior is already good.
+- [x] Empty/loading/error states polish; skeleton + toast behavior is already good.
 - [ ] PWA / desktop metadata, and a proper dark/light theme system (only `prefers-color-scheme` now).
 
 ### Testing & DX

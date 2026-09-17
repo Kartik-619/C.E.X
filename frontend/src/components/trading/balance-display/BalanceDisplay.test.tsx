@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { BalanceDisplay } from "./BalanceDisplay";
 
 vi.mock("@/services/api", () => ({
@@ -45,5 +45,18 @@ describe("BalanceDisplay", () => {
     render(<BalanceDisplay userId="user-1234" />);
 
     expect(await screen.findByText(/failed to fetch balance/i)).toBeInTheDocument();
+  });
+
+  it("retries the request when the retry action is clicked", async () => {
+    mockedGetBalance.mockRejectedValueOnce(new Error("Failed to fetch balance"));
+    mockedGetBalance.mockResolvedValue(mockBalance);
+    render(<BalanceDisplay userId="user-1234" />);
+
+    expect(await screen.findByText(/failed to fetch balance/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/2\.00/i).length).toBeGreaterThan(0);
+    });
   });
 });

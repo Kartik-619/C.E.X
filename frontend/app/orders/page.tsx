@@ -8,6 +8,8 @@ import { Sidebar } from "@/components/layout/sidebar/Sidebar";
 import { Badge } from "@/components/ui/badge/Badge";
 import { Button } from "@/components/ui/button/Button";
 import { EmptyState } from "@/components/ui/empty-state/EmptyState";
+import { ErrorState } from "@/components/ui/error-state/ErrorState";
+import { PageLoader } from "@/components/ui/page-loader/PageLoader";
 import { useUserOrders } from "@/hooks/useUserOrders";
 import { useWebSocketContext } from "@/context/WebSocketContext";
 import { useAuth } from "@/context/UserContext";
@@ -39,7 +41,7 @@ export default function OrdersPage() {
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
-  const { orders, loading: ordersLoading, error, cancellingId, cancelOrder } =
+  const { orders, loading: ordersLoading, error, cancellingId, cancelOrder, refetch } =
     useUserOrders(user?.id ?? null);
 
   useEffect(() => {
@@ -49,11 +51,7 @@ export default function OrdersPage() {
   }, [loading, user, router]);
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <div className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -91,6 +89,15 @@ export default function OrdersPage() {
                   {[...Array(4)].map((_, i) => (
                     <div key={i} className="h-6 rounded bg-zinc-100 dark:bg-zinc-800" />
                   ))}
+                </div>
+              ) : error && orders.length === 0 ? (
+                <div className="p-5">
+                  <ErrorState
+                    title="Couldn't load your orders"
+                    description={error}
+                    retryLabel="Try again"
+                    onRetry={refetch}
+                  />
                 </div>
               ) : orders.length === 0 ? (
                 <div className="p-5">
@@ -161,8 +168,10 @@ export default function OrdersPage() {
               )}
             </section>
 
-            {error && (
-              <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>
+            {error && orders.length > 0 && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400">
+                {error}
+              </div>
             )}
 
             <p className="mt-4 text-xs text-zinc-400">

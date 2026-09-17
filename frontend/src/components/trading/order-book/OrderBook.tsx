@@ -4,6 +4,8 @@ import React from "react";
 import { formatPrice, formatQuantity } from "@/utils/formatters";
 import { useOrderBook } from "@/hooks/useOrderBook";
 import { Skeleton } from "@/components/ui/skeleton/Skeleton";
+import { ErrorState } from "@/components/ui/error-state/ErrorState";
+import { EmptyState } from "@/components/ui/empty-state/EmptyState";
 
 export const OrderBook: React.FC = () => {
   const { orderBook, loading, error, refresh } = useOrderBook();
@@ -37,7 +39,12 @@ export const OrderBook: React.FC = () => {
           <h2 className="text-base font-semibold">Order Book</h2>
           <span className="text-xs text-zinc-400">Error</span>
         </div>
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <ErrorState
+          title="Couldn't load the order book"
+          description={error}
+          retryLabel="Retry"
+          onRetry={refresh}
+        />
       </section>
     );
   }
@@ -45,6 +52,19 @@ export const OrderBook: React.FC = () => {
   if (!orderBook) return null;
 
   const { bids = [], asks = [] } = orderBook;
+
+  if (bids.length === 0 && asks.length === 0) {
+    return (
+      <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="mb-4 text-base font-semibold">Order Book</h2>
+        <EmptyState
+          title="No orders in the market yet"
+          description="Market depth will appear here as soon as orders are placed."
+        />
+      </section>
+    );
+  }
+
   const maxBids = Math.max(...bids.map((b) => b.quantity), 1);
   const maxAsks = Math.max(...asks.map((a) => a.quantity), 1);
 

@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/layout/sidebar/Sidebar";
 import { Card } from "@/components/ui/card/Card";
 import { Button } from "@/components/ui/button/Button";
 import { Badge } from "@/components/ui/badge/Badge";
+import { PageLoader } from "@/components/ui/page-loader/PageLoader";
 import { useWebSocketContext } from "@/context/WebSocketContext";
 import { useAuth } from "@/context/UserContext";
 
@@ -37,11 +38,7 @@ export default function SettingsPage() {
   }, [loading, user, router]);
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <div className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   function handleSignOut() {
