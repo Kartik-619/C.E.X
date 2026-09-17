@@ -1,0 +1,16 @@
+11 |         private port: number = 3011,
+12 |         private logger: Logger
+13 |     ) {}
+14 | 
+15 |     start(): void {
+16 |         this.server = Bun.serve({
+                               ^
+error: Failed to start server. Is port 3011 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at start (K:\Projects\C.E.X\backend\src\infra\ws\ws-server.ts:16:27)
+      at K:\Projects\C.E.X\backend\src\http-layer\server.ts:37:10
+
+Bun v1.3.14 (Windows x64)

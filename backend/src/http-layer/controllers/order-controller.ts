@@ -1,0 +1,240 @@
+// ../controller/OrderController.ts
+
+import type { OrderService } from '../service/order-service';
+import type { CreateOrderRequestDTO, CancelOrderRequestDTO } from '../dto/requestorderDTO';
+import type { DepositRequestDTO } from '../dto/deposit-request.dto';
+import type { AuthContext } from '../middleware/auth-middleware';
+
+import { LoggerFactory } from "../../infra/logging/logger.factory"; 
+import { LogLevel } from "../../infra/logging/log-level";
+import { Logger } from "../../infra/logging/logger";
+
+
+export class OrderController {
+    private readonly logger: Logger;
+
+    constructor(private orderService: OrderService) {
+        this.logger = LoggerFactory.createLogger('console', LogLevel.INFO);
+    }
+
+    // 1. Active order - match immediately
+    async placeOrder(request: Request): Promise<Response> {
+        this.logger.log(LogLevel.INFO, `[OrderController] Received placeOrder request`);
+        try {
+            const body = await request.json() as Record<string, any>;
+            
+            if (!body || typeof body !== 'object') {
+                this.logger.log(LogLevel.WARN, `[OrderController] Invalid request body for placeOrder`);
+                return this.errorResponse('Invalid request body', 400);
+            }
+
+            const dto: CreateOrderRequestDTO = {
+                userId: body.userId,
+                symbol: body.symbol,
+                side: body.side,
+                price: Number(body.price),
+                quantity: Number(body.quantity),
+                type: body.type || 'LIMIT'
+            };
+
+            this.validateCreateOrder(dto);
+
+            const result = await this.orderService.placeOrder(dto);
+            this.logger.log(LogLevel.INFO, `[OrderController] Successfully placed order for user: ${dto.userId}, symbol: ${dto.symbol}`);
+            return this.successResponse(result, 201);
+
+        } catch (error: any) {
+            this.logger.log(LogLevel.ERROR, `[OrderController] Error in placeOrder: ${error.message}`);
+            return this.errorResponse(error); // Validation errors are typically 400
+        }
+    }
+
+    // 2. Passive order - just add to book (no matching)
+    async addOrder(request: Request): Promise<Response> {
+        this.logger.log(LogLevel.INFO, `[OrderController] Received addOrder request`);
+        try {
+            const body = await request.json() as Record<string, any>;
+            
+            if (!body || typeof body !== 'object') {
+                this.logger.log(LogLevel.WARN, `[OrderController] Invalid request body for addOrder`);
+                return this.errorResponse('Invalid request body', 400);
+            }
+
+            const dto: CreateOrderRequestDTO = {
+                userId: body.userId,
+                symbol: body.symbol,
+                side: body.side,
+                price: Number(body.price),
+                quantity: Number(body.quantity),
+                type: body.type || 'LIMIT'
+            };
+
+            this.validateCreateOrder(dto);
+
+            await this.orderService.addOrder(dto);
+            this.logger.log(LogLevel.INFO, `[OrderController] Successfully added order for user: ${dto.userId}, symbol: ${dto.symbol}`);
+            return this.successResponse({ message: 'Order added successfully' }, 201);
+            
+        } catch (error: any) {
+            this.logger.log(LogLevel.ERROR, `[OrderController] Error in addOrder: ${error.message}`);
+            return this.errorResponse(error, 400);
+        }
+    }
+
+    // 3. Cancel order
+    async cancelOrder(request: Request): Promise<Response> {
+        this.logger.log(LogLevel.INFO, `[OrderController] Received cancelOrder request`);
+        try {
+            const body = await request.json() as Record<string, any>;
+            
+            if (!body || typeof body !== 'object') {
+                this.logger.log(LogLevel.WARN, `[OrderController] Invalid request body for cancelOrder`);
+                return this.errorResponse('Invalid request body', 400);
+            }
+
+            if (!body.orderId) {
+                this.logger.log(LogLevel.WARN, `[OrderController] Missing orderId for cancelOrder`);
+                return this.errorResponse('Order ID is required', 400);
+            }
+            if (!body.userId) {
+                this.logger.log(LogLevel.WARN, `[OrderController] Missing userId for cancelOrder`);
+                return this.errorResponse('User ID is required', 400);
+            }
+
+            const dto: CancelOrderRequestDTO = {
+                orderId: Number(body.orderId),
+                userId: body.userId
+            };
+
+            await this.orderService.cancelOrder(dto.orderId, dto.userId);
+            this.logger.log(LogLevel.INFO, `[OrderController] Successfully cancelled order: ${dto.orderId} for user: ${dto.userId}`);
+            return this.successResponse({ message: 'Order cancelled successfully' }, 200);
+            
+        } catch (error: any) {
+            this.logger.log(LogLevel.ERROR, `[OrderController] Error in cancelOrder: ${error.message}`);
+            return this.errorResponse(error); // Or 500 depending on the specific error
+        }
+    }
+
+    // 4. Get balance
+    async getBalance(request: Request): Promise<Response> {
+        this.logger.log(LogLevel.INFO, `[OrderController] Received getBalance request`);
+        try {
+            const url = new URL(request.url);
+            const userId = url.pathname.split('/').pop();
+            const asset = url.searchParams.get('asset') || 'USD';
+
+            if (!userId) {
+                this.logger.log(LogLevel.WARN, `[OrderController] Missing userId in getBalance request`);
+                return this.errorResponse('User ID is required', 400);
+            }
+
+            const balance = await this.orderService.getBalance(userId, asset);
+            
+            //  If the user has no wallet at all, return 404
+            const hasWallet = await this.orderService.hasWallet(userId);
+            if (!balance || !hasWallet) {
+                this.logger.log(LogLevel.WARN, `[OrderController] User not found for userId: ${userId}, asset: ${asset}`);
+                return new Response(
+                    JSON.stringify({ error: 'User not found' }),
+                    { status: 404, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+
+            this.logger.log(LogLevel.INFO, `[OrderController] Successfully retrieved balance for userId: ${userId}, asset: ${asset}`);
+            return this.successResponse(balance);
+            
+        } catch (error: any) {
+            this.logger.log(LogLevel.ERROR, `[OrderController] Error in getBalance: ${error.message}`);
+            return this.errorResponse(error);
+        }
+    }
+
+    // 5. Deposit funds
+    async deposit(request: Request, auth: AuthContext): Promise<Response> {
+        this.logger.log(LogLevel.INFO, `[OrderController] Received deposit request`);
+        try {
+            const body = await request.json() as Record<string, unknown>;
+
+            if (!body || typeof body !== 'object') {
+                this.logger.log(LogLevel.WARN, `[OrderController] Invalid request body for deposit`);
+                return this.errorResponse('Invalid request body', 400);
+            }
+
+            const dto: DepositRequestDTO = {
+                userId: body.userId as string,
+                asset: (body.asset as string) || 'USD',
+                amount: Number(body.amount),
+            };
+
+            if (!dto.userId) {
+                return this.errorResponse('User ID is required', 400);
+            }
+            if (dto.userId !== auth.user.id) {
+                return this.errorResponse('Cannot deposit to another user\'s wallet', 403);
+            }
+            if (dto.amount <= 0 || Number.isNaN(dto.amount)) {
+                return this.errorResponse('Amount must be greater than 0', 400);
+            }
+
+            const balance = await this.orderService.deposit(dto);
+            this.logger.log(LogLevel.INFO, `[OrderController] Successfully deposited ${dto.amount} ${dto.asset} for user: ${dto.userId}`);
+            return this.successResponse(balance, 200);
+        } catch (error: any) {
+            this.logger.log(LogLevel.ERROR, `[OrderController] Error in deposit: ${error.message}`);
+            const status = error.message === 'User not found' ? 404 : 400;
+            return this.errorResponse(error, status);
+        }
+    }
+
+    // 6. Get order book
+    async getOrderBook(request: Request): Promise<Response> {
+        this.logger.log(LogLevel.INFO, `[OrderController] Received getOrderBook request`);
+        try {
+            const orderBook = await this.orderService.getOrderBook();
+            return this.successResponse(orderBook);
+        } catch (error: any) {
+            this.logger.log(LogLevel.ERROR, `[OrderController] Error in getOrderBook: ${error.message}`);
+            return this.errorResponse(error);
+        }
+    }
+
+    // ─── Validators ────────────────────────────────────────────────
+
+    private validateCreateOrder(dto: CreateOrderRequestDTO): void {
+        if (!dto.userId) throw new Error('User ID is required');
+        if (!dto.symbol) throw new Error('Symbol is required');
+        if (dto.price <= 0) throw new Error('Price must be greater than 0');
+        if (dto.quantity <= 0) throw new Error('Quantity must be greater than 0');
+        if (dto.side !== 'buy' && dto.side !== 'sell') throw new Error('Side must be "buy" or "sell"');
+    }
+
+    // ─── Response Helpers ──────────────────────────────────────────
+
+    private successResponse(data: any, status: number = 200): Response {
+        return new Response(
+            JSON.stringify(data),
+            {
+                status,
+                headers: { 'Content-Type': 'application/json' }
+            }
+        );
+    }
+
+    private errorResponse(error: any, status?: number): Response {
+        const message = error.message || error || 'Internal server error';
+        // Use provided status or determine from message
+        const statusCode = status || (message.includes('required') || message.includes('must be') ? 400 : 500);
+        
+        // Log the error response being sent to the client
+        this.logger.log(statusCode >= 500 ? LogLevel.ERROR : LogLevel.WARN, `[OrderController] Sending error response: ${message} (Status: ${statusCode})`);
+
+        return new Response(
+            JSON.stringify({ error: message }),
+            {
+                status: statusCode,
+                headers: { 'Content-Type': 'application/json' }
+            }
+        );
+    }
+}
