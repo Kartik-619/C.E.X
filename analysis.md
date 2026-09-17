@@ -79,8 +79,8 @@
 2. **WS `sendToUser` broadcasts to *all* clients** — no per-user/per-chanel filtering (privacy/UX bug).
 3. **Unused `Routes` class bug** — `order.routes.ts` wires `POST /api/balance/deposit` to `getBalance`; harmless only because `server.ts` hand-wires the correct route and ignores the class.
 4. **`FileLogger` is a `console.log` stub** — real file logging not implemented (AGENTS.md violation); `WebSocketBroadcaster` uses `console.log`.
-5. **`tradeId` type mismatch** — engine emits `crypto.randomUUID()` strings, payload types declare `number`.
-6. **`TradeHistory` hardcodes side `"buy"`** — buy/sell side not derived from trade data.
+5. ~~**`tradeId` type mismatch**~~ → resolved: payload types now declare `string` (matches engine's `crypto.randomUUID()`).
+6. ~~**`TradeHistory` hardcodes side `"buy"`**~~ → resolved: side + user filtering now derived from `buyerId`/`sellerId` in `useTradeHistory`.
 7. **Frontend username hack** — `username` decoded from JWT `payload.email`.
 8. **E2E suite blocked** — requires a manually started backend; two log files (`err.log`/`out.log`) track the run.
 
@@ -92,7 +92,7 @@
 - [ ] Enforce userId ownership in `getBalance` (match caller to target).
 - [ ] Reduce WS broadcasts to the *authenticated* user only (map socket → user, filter in `sendToUser`).
 - [ ] Implement a real `FileLogger` (or `pino`/`winston`-style) and replace `console.log` in the WS broadcaster — estate dependency injectable logger interface.
-- [ ] Unify `tradeId` type (`string`) across engine events and payloads.
+- [x] Unify `tradeId` type (`string`) across engine events and payloads.
 - [ ] Add rate limiting / request-body validation on auth + deposit + order routes.
 - [ ] Add input sanitization on order quantity/price bounds server-side (not just zod client-side).
 

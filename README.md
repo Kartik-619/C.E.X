@@ -324,9 +324,8 @@ Tracked in detail in [`analysis.md`](./analysis.md). Highlights:
 2. WS `sendToUser` currently broadcasts to all clients rather than filtering by authenticated user.
 3. The `Routes` class in `order.routes.ts` is a stub superseded by manual routing in `server.ts`.
 4. `FileLogger` is a `console.log` stub; real file logging not implemented.
-5. `tradeId` type mismatch: the engine emits UUID strings while some payload types declare `number`.
-6. E2E suite requires a manually started server.
-7. Single trading pair (`BTC/USD`) supported end-to-end; OTP email requires EmailJS configuration.
+5. E2E suite requires a manually started server.
+6. Single trading pair (`BTC/USD`) supported end-to-end; OTP email requires EmailJS configuration.
 
 ---
 

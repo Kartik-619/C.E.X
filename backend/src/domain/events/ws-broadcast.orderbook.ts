@@ -15,7 +15,7 @@ interface OrderPlacedData {
 }
 
 interface TradeExecutedData {
-    tradeId: number;
+    tradeId: string;
     price: number;
     quantity: number;
     totalValue: number;

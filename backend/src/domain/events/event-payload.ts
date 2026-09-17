@@ -17,7 +17,7 @@ export interface OrderPlacedPayload {
 }
 
 export interface TradeExecutedPayload {
-    tradeId: number;
+    tradeId: string;
     buyOrderId: number;
     sellOrderId: number;
     price: number;
