@@ -174,6 +174,42 @@ it('should add order without matching', async () => {
         });
     });
 
+    describe('getUserOrders', () => {
+        it('should return only the orders belonging to the requested user', async () => {
+            const result = await orderService.getUserOrders('alice');
+
+            expect(mockEngine.getOrderBook).toHaveBeenCalled();
+            expect(result).toHaveLength(2);
+            expect(result.every((order) => order.userId === 'alice')).toBe(true);
+        });
+
+        it('should return an empty list when the user has no open orders', async () => {
+            const result = await orderService.getUserOrders('unknown-user');
+
+            expect(result).toEqual([]);
+        });
+
+        it('should return OrderResponseDTO structure for each order', async () => {
+            const result = await orderService.getUserOrders('bob');
+
+            expect(result).toHaveLength(1);
+            expect(result[0]).toEqual(expect.objectContaining({
+                userId: 'bob',
+                symbol: 'BTC/USD',
+                side: 'sell',
+                price: 102,
+                quantity: 1,
+                status: expect.any(String),
+                totalValue: 102,
+                createdAt: expect.any(String)
+            }));
+        });
+
+        it('should throw an error when userId is missing', async () => {
+            await expect(orderService.getUserOrders('')).rejects.toThrow('User ID is required');
+        });
+    });
+
     describe('getOrderBook', () => {
         it('should return order book snapshot with aggregated bids and asks', async () => {
             const result = await orderService.getOrderBook();

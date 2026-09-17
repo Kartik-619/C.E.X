@@ -103,7 +103,22 @@ export class OrderService {
         return this.getBalance(dto.userId, dto.asset);
     }
 
-    // 5. Get order book snapshot
+    // 5b. Get all open orders for a specific user
+    async getUserOrders(userId: string): Promise<OrderResponseDTO[]> {
+        this.logger.log(LogLevel.INFO, `[OrderService] Fetching orders for user: ${userId}`);
+
+        if (!userId) {
+            this.logger.log(LogLevel.WARN, `[OrderService] Fetch failed: Invalid userId provided`);
+            throw new Error('User ID is required');
+        }
+
+        const orders = await this.engine.getOrderBook();
+        return orders
+            .filter((order) => order.userId === userId)
+            .map((order) => this.toResponseDTO(order));
+    }
+
+    // 6. Get order book snapshot
     async getOrderBook(): Promise<OrderBookSnapshotDTO> {
         this.logger.log(LogLevel.INFO, `[OrderService] Fetching order book snapshot`);
 

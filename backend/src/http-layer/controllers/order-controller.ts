@@ -187,7 +187,26 @@ export class OrderController {
         }
     }
 
-    // 6. Get order book
+    // 6. Get open orders for the authenticated user
+    async getUserOrders(request: Request, auth?: AuthContext): Promise<Response> {
+        this.logger.log(LogLevel.INFO, `[OrderController] Received getUserOrders request`);
+        try {
+            const userId = auth?.user.id || new URL(request.url).searchParams.get('userId');
+
+            if (!userId) {
+                this.logger.log(LogLevel.WARN, `[OrderController] Missing userId in getUserOrders request`);
+                return this.errorResponse('User ID is required', 400);
+            }
+
+            const orders = await this.orderService.getUserOrders(userId);
+            return this.successResponse(orders);
+        } catch (error: any) {
+            this.logger.log(LogLevel.ERROR, `[OrderController] Error in getUserOrders: ${error.message}`);
+            return this.errorResponse(error);
+        }
+    }
+
+    // 7. Get order book
     async getOrderBook(request: Request): Promise<Response> {
         this.logger.log(LogLevel.INFO, `[OrderController] Received getOrderBook request`);
         try {

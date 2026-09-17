@@ -182,6 +182,8 @@ const server = serve({
                 response = await oauthController.providers(request);
             } else if (path === '/api/orderbook' && method === 'GET') {
                 response = await orderController.getOrderBook(request);
+            } else if (path === '/api/orders' && method === 'GET') {
+                response = await requireAuth((req, auth) => orderController.getUserOrders(req, auth))(request);
             } else if (path === '/api/orders' && method === 'POST') {
                 response = await requireAuth((req) => orderController.placeOrder(req))(request);
             } else if (path === '/api/orders/add' && method === 'POST') {
@@ -224,6 +226,7 @@ console.log(`   GET    /api/auth/oauth              - Initiate OAuth flow`);
 console.log(`   GET    /api/auth/oauth/callback     - OAuth callback`);
 console.log(`   GET    /api/auth/oauth/providers    - List configured OAuth providers`);
 console.log(`   POST   /api/orders                 - Place an order (auth)`);
+console.log(`   GET    /api/orders                  - List user's open orders (auth)`);
 console.log(`   POST   /api/orders/add             - Add order to book (auth)`);
 console.log(`   DELETE /api/orders                  - Cancel an order (auth)`);
 console.log(`   GET    /api/balance/:userId         - Get balance (auth)`);

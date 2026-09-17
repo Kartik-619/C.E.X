@@ -19,6 +19,10 @@ export class OrderRoutes implements RouteModule {
             this.orderController.cancelOrder(req)
         );
 
+        router.get('/api/orders', (req: Request) => 
+            this.orderController.getUserOrders(req)
+        );
+
         router.get('/api/balance/:userId', (req: Request) => 
             this.orderController.getBalance(req)
         );

@@ -36,7 +36,7 @@ const NAV_ITEMS = [
   },
   {
     label: "Orders",
-    href: "/dashboard",
+    href: "/orders",
     icon: (
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 11l3 3L22 4" />
@@ -46,7 +46,7 @@ const NAV_ITEMS = [
   },
   {
     label: "History",
-    href: "/dashboard",
+    href: "/history",
     icon: (
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 8v4l3 3" />
@@ -56,7 +56,7 @@ const NAV_ITEMS = [
   },
   {
     label: "Settings",
-    href: "/dashboard",
+    href: "/settings",
     icon: (
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />

@@ -88,6 +88,10 @@ describe('Routes', () => {
                 '/api/orders',
                 expect.any(Function)
             );
+            expect(mockRouter.get).toHaveBeenCalledWith(
+                '/api/orders',
+                expect.any(Function)
+            );
         });
 
         it('should register 404 fallback', () => {

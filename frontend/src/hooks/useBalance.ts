@@ -4,13 +4,14 @@ import type { BalanceResponse } from "@/types/api";
 import { getBalance, depositFunds } from "@/services/api";
 import { useState, useCallback, useEffect } from "react";
 
-export function useBalance(userId: string) {
+export function useBalance(userId: string | null) {
   const [balance, setBalance] = useState<BalanceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [depositing, setDepositing] = useState(false);
 
   const refetch = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
     setError(null);
     try {
@@ -25,6 +26,7 @@ export function useBalance(userId: string) {
 
   const deposit = useCallback(
     async (amount: number, asset = "USD"): Promise<BalanceResponse | null> => {
+      if (!userId) return null;
       setDepositing(true);
       setError(null);
       try {
@@ -43,11 +45,14 @@ export function useBalance(userId: string) {
   );
 
   useEffect(() => {
+    if (!userId) return;
+
+    const id = userId;
     let cancelled = false;
 
     async function load() {
       try {
-        const data = await getBalance(userId);
+        const data = await getBalance(id);
         if (!cancelled) setBalance(data);
       } catch (err: unknown) {
         if (!cancelled)

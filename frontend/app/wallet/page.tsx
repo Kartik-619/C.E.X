@@ -12,17 +12,14 @@ import { useWebSocketContext } from "@/context/WebSocketContext";
 import { useAuth } from "@/context/UserContext";
 import { formatCurrency } from "@/utils/formatters";
 
-const DEFAULT_USER_ID = "alice";
-
 export default function Wallet() {
   const { connected } = useWebSocketContext();
   const { user, loading } = useAuth();
   const router = useRouter();
-  const userId = user?.id || DEFAULT_USER_ID;
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
   const { balance, loading: balanceLoading, error, refetch, deposit, depositing } =
-    useBalance(userId);
+    useBalance(user?.id ?? null);
 
   useEffect(() => {
     if (!loading && !user) {

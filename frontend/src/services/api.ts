@@ -195,6 +195,20 @@ export async function cancelOrder(orderId: string): Promise<void> {
   }
 }
 
+export async function getUserOrders(): Promise<OrderResponse[]> {
+  const response = await fetch(`${API_BASE_URL}/orders`, {
+    method: "GET",
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to fetch orders"));
+  }
+
+  return response.json() as Promise<OrderResponse[]>;
+}
+
 // ── Public API ──────────────────────────────────────────────────────
 
 export async function healthCheck(): Promise<HealthResponse> {

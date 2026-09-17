@@ -10,13 +10,10 @@ import { TradeHistory } from "@/components/trading/trade-history/TradeHistory";
 import { useWebSocketContext } from "@/context/WebSocketContext";
 import { useAuth } from "@/context/UserContext";
 
-const DEFAULT_USER_ID = "alice";
-
 export default function Dashboard() {
   const { connected } = useWebSocketContext();
   const { user, loading } = useAuth();
   const router = useRouter();
-  const userId = user?.id || DEFAULT_USER_ID;
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
   useEffect(() => {
@@ -32,6 +29,8 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const userId = user.id;
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">

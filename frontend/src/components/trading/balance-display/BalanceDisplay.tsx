@@ -5,10 +5,10 @@ import { useBalance } from "@/hooks/useBalance";
 import { BalanceDisplayView } from "./BalanceDisplayView";
 
 interface BalanceDisplayProps {
-  userId?: string;
+  userId: string;
 }
 
-export const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ userId = "alice" }) => {
+export const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ userId }) => {
   const { balance, loading, error, refetch } = useBalance(userId);
 
   return (

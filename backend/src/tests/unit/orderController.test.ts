@@ -77,6 +77,9 @@ describe('OrderController', () => {
                 locked: 0,
                 total: 1000 + dto.amount
             })),
+            getUserOrders: mock(async (userId: string) => [
+                { id: 7, userId, symbol: 'BTC/USD', side: 'buy', price: 100, quantity: 2, status: 'OPEN', totalValue: 200, createdAt: new Date().toISOString() }
+            ]),
             getOrderBook: mock(async () => ({
                 bids: [{ price: 100, quantity: 2 }],
                 asks: [{ price: 101, quantity: 1 }],
@@ -324,6 +327,48 @@ describe('OrderController', () => {
 
             const response = await controller.deposit(request, auth);
             expect(response.status).toBe(400);
+        });
+    });
+
+    describe('getUserOrders', () => {
+        const auth = { user: { id: 'alice', email: 'alice@test.com', username: 'alice', provider: 'local', providerUserId: null, createdAt: new Date(), updatedAt: new Date() } };
+
+        it('should return 200 with the authenticated user orders', async () => {
+            const request = new Request('http://localhost/api/orders', {
+                method: 'GET'
+            });
+
+            const response = await controller.getUserOrders(request, auth);
+            const data = await parseResponse<OrderResponse[]>(response);
+
+            expect(response.status).toBe(200);
+            expect(data).toHaveLength(1);
+            expect(data[0]).toMatchObject({ userId: 'alice' });
+            expect(mockOrderService.getUserOrders).toHaveBeenCalledWith('alice');
+        });
+
+        it('should fall back to the userId query parameter when no auth context is provided', async () => {
+            const request = new Request('http://localhost/api/orders?userId=bob', {
+                method: 'GET'
+            });
+
+            const response = await controller.getUserOrders(request);
+            const data = await parseResponse<OrderResponse[]>(response);
+
+            expect(response.status).toBe(200);
+            expect(mockOrderService.getUserOrders).toHaveBeenCalledWith('bob');
+        });
+
+        it('should return 400 when userId is missing', async () => {
+            const request = new Request('http://localhost/api/orders', {
+                method: 'GET'
+            });
+
+            const response = await controller.getUserOrders(request);
+            const data = await parseResponse<ErrorResponse>(response);
+
+            expect(response.status).toBe(400);
+            expect(data.error).toContain('User ID is required');
         });
     });
 
