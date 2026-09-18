@@ -2,15 +2,20 @@
 
 import { LogLevel } from "../logging/log-level";
 import type { Logger } from "../logging/logger";
+import type { ITokenVerifier } from "../auth/jwt";
+import { WsClientRegistry, type WsSink } from "./ws-client.registry";
 
 export class WebsocketServer {
     private server: any = null;
-    private clients: Map<string, WebSocket> = new Map();
+    private readonly clientRegistry: WsClientRegistry;
 
     constructor(
         private port: number = 3011,
-        private logger: Logger
-    ) {}
+        private logger: Logger,
+        private tokenVerifier: ITokenVerifier
+    ) {
+        this.clientRegistry = new WsClientRegistry(logger);
+    }
 
     start(): void {
         this.server = Bun.serve({
@@ -19,21 +24,26 @@ export class WebsocketServer {
                 open: (ws: any) => {
                     const clientId = crypto.randomUUID();
                     ws.clientId = clientId;
-                    this.clients.set(clientId, ws);
-                    this.logger.log(LogLevel.INFO, `[WebSocket] Client connected: ${clientId} (${this.clients.size} total)`);
+                    const userId = ws.data?.userId ?? null;
+                    this.clientRegistry.register(clientId, ws as WsSink, userId);
+                    this.logger.log(LogLevel.INFO, `[WebSocket] Client connected: ${clientId}${userId ? ` as ${userId}` : ''} (${this.getClientCount()} total)`);
                 },
                 message: (ws: any, message: any) => {
                     // Handle messages from client if needed
                     this.logger.log(LogLevel.DEBUG, `[WebSocket] Received message from ${ws.clientId}`);
                 },
                 close: (ws: any) => {
-                    this.clients.delete(ws.clientId);
-                    this.logger.log(LogLevel.INFO, `[WebSocket] Client disconnected: ${ws.clientId} (${this.clients.size} remaining)`);
+                    this.clientRegistry.unregister(ws.clientId);
+                    this.logger.log(LogLevel.INFO, `[WebSocket] Client disconnected: ${ws.clientId} (${this.getClientCount()} remaining)`);
                 }
             },
             fetch: (req: Request) => {
-                // Upgrade HTTP request to WebSocket
-                const upgraded = this.server?.upgrade(req);
+                const url = new URL(req.url);
+                const userId = this.resolveUserId(url.searchParams.get('token'));
+
+                // Upgrade HTTP request to WebSocket, carrying the authenticated
+                // identity so this client is reachable via sendToUser.
+                const upgraded = this.server?.upgrade(req, { data: { userId } });
                 if (upgraded) {
                     return new Response(null, { status: 101 });
                 }
@@ -45,25 +55,8 @@ export class WebsocketServer {
     }
 
     broadcast(eventType: string, data: any): void {
-        const message = JSON.stringify({
-            type: eventType,
-            data: data,
-            timestamp: Date.now()
-        });
-
-        let sentCount = 0;
-
-        for (const [clientId, client] of this.clients) {
-            try {
-                if (client.readyState === 1) { // OPEN
-                    client.send(message);
-                    sentCount++;
-                }
-            } catch (error) {
-                this.logger.log(LogLevel.WARN, `[WebSocket] Failed to send to ${clientId}: ${error}`);
-                this.clients.delete(clientId);
-            }
-        }
+        const message = this.serialize(eventType, data);
+        const sentCount = this.clientRegistry.broadcast(message);
 
         if (sentCount > 0) {
             this.logger.log(LogLevel.DEBUG, `[WebSocket] Broadcasted ${eventType} to ${sentCount} clients`);
@@ -71,18 +64,42 @@ export class WebsocketServer {
     }
 
     sendToUser(userId: string, eventType: string, data: any): void {
-        this.broadcast(eventType, data);
+        const message = this.serialize(eventType, data);
+        const sentCount = this.clientRegistry.sendToUser(userId, message);
+
+        if (sentCount > 0) {
+            this.logger.log(LogLevel.DEBUG, `[WebSocket] Sent ${eventType} to ${sentCount} client(s) of user ${userId}`);
+        }
     }
 
     getClientCount(): number {
-        return this.clients.size;
+        return this.clientRegistry.getClientCount();
     }
 
     stop(): void {
         if (this.server) {
             this.server.stop();
-            this.clients.clear();
+            this.clientRegistry.clear();
             this.logger.log(LogLevel.INFO, '[WebSocket] Server stopped');
+        }
+    }
+
+    private serialize(eventType: string, data: any): string {
+        return JSON.stringify({
+            type: eventType,
+            data: data,
+            timestamp: Date.now()
+        });
+    }
+
+    private resolveUserId(token: string | null): string | null {
+        if (!token) return null;
+
+        try {
+            return this.tokenVerifier.verify(token).userId;
+        } catch {
+            this.logger.log(LogLevel.WARN, `[WebSocket] Rejected connection with invalid token`);
+            return null;
         }
     }
 }

@@ -7,6 +7,10 @@ export interface TokenPayload {
     email: string;
 }
 
+export interface ITokenVerifier {
+    verify(token: string): TokenPayload;
+}
+
 export class JWTService {
     private static secret = process.env.JWT_SECRET || 'your-secret-key';
     private static expiresIn = '7d' as const;
@@ -21,5 +25,11 @@ export class JWTService {
         } catch {
             throw new Error('Invalid or expired token');
         }
+    }
+}
+
+export class JwtTokenVerifier implements ITokenVerifier {
+    verify(token: string): TokenPayload {
+        return JWTService.verify(token);
     }
 }

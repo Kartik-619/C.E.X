@@ -76,7 +76,7 @@
 ## Known Gaps / Bugs
 
 1. **`getBalance` authorization gap** — only checks a valid token, doesn't verify the requested `:userId` matches the caller. The frontend's hard-coded `DEFAULT_USER_ID = "alice"` breaks whenever the logged-in user isn't alice.
-2. **WS `sendToUser` broadcasts to *all* clients** — no per-user/per-chanel filtering (privacy/UX bug).
+2. ~~**WS `sendToUser` broadcasts to *all* clients**~~ → resolved: clients authenticate via `?token=` JWT on connect; a `WsClientRegistry` maps sockets to their user id and `sendToUser` delivers only to that user's connections. Public events (`ORDER_PLACED`, `TRADE_EXECUTED`) still broadcast.
 3. **Unused `Routes` class bug** — `order.routes.ts` wires `POST /api/balance/deposit` to `getBalance`; harmless only because `server.ts` hand-wires the correct route and ignores the class.
 4. **`FileLogger` is a `console.log` stub** — real file logging not implemented (AGENTS.md violation); `WebSocketBroadcaster` uses `console.log`.
 5. ~~**`tradeId` type mismatch**~~ → resolved: payload types now declare `string` (matches engine's `crypto.randomUUID()`).
@@ -90,7 +90,7 @@
 
 ### Fix correctness & security (highest priority)
 - [ ] Enforce userId ownership in `getBalance` (match caller to target).
-- [ ] Reduce WS broadcasts to the *authenticated* user only (map socket → user, filter in `sendToUser`).
+- [x] Reduce WS broadcasts to the *authenticated* user only (`sendToUser` uses a per-user socket registry; clients send their JWT via `?token=`).
 - [ ] Implement a real `FileLogger` (or `pino`/`winston`-style) and replace `console.log` in the WS broadcaster — estate dependency injectable logger interface.
 - [x] Unify `tradeId` type (`string`) across engine events and payloads.
 - [ ] Add rate limiting / request-body validation on auth + deposit + order routes.

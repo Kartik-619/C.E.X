@@ -1,9 +1,18 @@
+import { getToken } from "./api";
 import type { WSMessage, WSEventType, WSOrderPlaced } from "../types/websocket";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3011";
 
+function buildWsUrl(): string {
+  const token = getToken();
+  if (!token) return WS_URL;
+  const separator = WS_URL.includes("?") ? "&" : "?";
+  return `${WS_URL}${separator}token=${encodeURIComponent(token)}`;
+}
+
 let websocket: WebSocket | null = null;
 let reconnectTimeout: NodeJS.Timeout | null = null;
+let manualClose = false;
 const listeners: Map<WSEventType, Set<(message: WSMessage) => void>> = new Map();
 let onConnectionChange: ((connected: boolean) => void) | null = null;
 let onRealtimeMessage: ((message: WSMessage) => void) | null = null;
@@ -26,7 +35,7 @@ export function initWebSocket(
     return;
   }
 
-  websocket = new WebSocket(WS_URL);
+  websocket = new WebSocket(buildWsUrl());
 
   websocket.onopen = () => {
     console.log("WebSocket connected");
@@ -44,8 +53,13 @@ export function initWebSocket(
   };
 
   websocket.onclose = () => {
-    console.log("WebSocket disconnected, attempting reconnection...");
     notifyConnectionChange(false);
+    if (manualClose) {
+      manualClose = false;
+      console.log("WebSocket disconnected");
+      return;
+    }
+    console.log("WebSocket disconnected, attempting reconnection...");
     scheduleReconnect();
   };
 
@@ -59,6 +73,12 @@ function scheduleReconnect(): void {
     clearTimeout(reconnectTimeout);
   }
   reconnectTimeout = setTimeout(() => {
+    reconnectTimeout = null;
+    const socket = websocket;
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+      console.log("WebSocket: live connection exists, skipping duplicate reconnect");
+      return;
+    }
     websocket = null;
     initWebSocket(onRealtimeMessage ?? (() => {}));
   }, 3000);

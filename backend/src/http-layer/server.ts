@@ -36,6 +36,7 @@ import { WebSocketBroadcaster } from '../domain/events/ws-broadcast.orderbook';
 import { LoggerFactory } from '../infra/logging/logger.factory';
 import { LogLevel } from '../infra/logging/log-level';
 import { OTPService } from '../infra/auth/otp';
+import { JwtTokenVerifier } from '../infra/auth/jwt';
 
 const USE_DB = process.env.USE_DB === 'true';
 
@@ -65,7 +66,7 @@ const wallet = new Wallet(walletStore);
 const bus = new EventManager(logger);
 
 // 3. Create WebSocket Server
-const wsServer = new WebsocketServer(3011, logger);
+const wsServer = new WebsocketServer(3011, logger, new JwtTokenVerifier());
 wsServer.start();
 
 // 4. Create WebSocket Broadcaster (connects EventBus → WebSocket)

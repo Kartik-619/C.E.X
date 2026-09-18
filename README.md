@@ -321,7 +321,7 @@ npx tsc --noEmit  # strict typecheck
 Tracked in detail in [`analysis.md`](./analysis.md). Highlights:
 
 1. `GET /api/balance/:userId` doesn't verify the requested user matches the caller's token — mitigated client-side for now (the previous hard-coded `alice` default has been removed).
-2. WS `sendToUser` currently broadcasts to all clients rather than filtering by authenticated user.
+2. WS private events (`ORDER_FILLED`, `ORDER_FAILED`, `ORDER_CANCELLED`, `OTPASKED`, …) are now scoped to the authenticated user: the client connects with its JWT (`?token=…`) and `sendToUser` delivers only to that user's sockets. (Resolved — previously broadcast to everyone.)
 3. The `Routes` class in `order.routes.ts` is a stub superseded by manual routing in `server.ts`.
 4. `FileLogger` is a `console.log` stub; real file logging not implemented.
 5. E2E suite requires a manually started server.

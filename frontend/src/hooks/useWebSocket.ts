@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/context/UserContext";
 import type { WSMessage, WSEventType, WSOrderPlaced } from "@/types/websocket";
 import {
   initWebSocket,
@@ -13,6 +14,7 @@ import {
 export function useWebSocket() {
   const [connected, setConnected] = useState(false);
   const [message, setMessage] = useState<WSMessage | null>(null);
+  const { token } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -27,12 +29,13 @@ export function useWebSocket() {
       setConnected(isConnected);
     };
 
+    disconnectService();
     initWebSocket(handleMessage, handleStatus);
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [token]);
 
   const subscribe = useCallback((eventType: WSEventType, callback: (msg: WSMessage) => void) => {
     subscribeService(eventType, callback);

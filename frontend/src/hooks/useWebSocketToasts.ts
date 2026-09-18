@@ -25,6 +25,7 @@ export function useWebSocketToasts(userId: string | null) {
     const onFilled = (message: WSMessage) => {
       if (message.type !== "ORDER_FILLED") return;
       const { data } = message as WSOrderFilled;
+      if (data.userId !== userId) return;
       const side = data.side === "buy" ? "Buy" : "Sell";
       toast.success(`${side} order filled: ${data.quantity} ${data.symbol} @ ${formatPrice(data.price)}`);
     };
@@ -32,6 +33,7 @@ export function useWebSocketToasts(userId: string | null) {
     const onCancelled = (message: WSMessage) => {
       if (message.type !== "ORDER_CANCELLED") return;
       const { data } = message as WSOrderCancelled;
+      if (data.userId !== userId) return;
       const side = data.side === "buy" ? "Buy" : "Sell";
       toast.info(`${side} order cancelled: ${data.quantity} ${data.symbol}`);
     };
@@ -39,11 +41,14 @@ export function useWebSocketToasts(userId: string | null) {
     const onFailed = (message: WSMessage) => {
       if (message.type !== "ORDER_FAILED") return;
       const { data } = message as WSOrderFailed;
+      if (data.userId !== userId) return;
       toast.error(`Order failed: ${data.reason}`);
     };
 
     const onPending = (message: WSMessage) => {
       if (message.type !== "ORDER_PENDING") return;
+      const { data } = message as WSOrderPending;
+      if (data.userId !== userId) return;
       toast.warning("Order is pending...");
     };
 
@@ -57,11 +62,15 @@ export function useWebSocketToasts(userId: string | null) {
 
     const onOTPAsked = (message: WSMessage) => {
       if (message.type !== "OTPASKED") return;
+      const { data } = message as WSOTPAsked;
+      if (data.userId !== userId) return;
       toast.info("OTP verification required");
     };
 
     const onOTPFailed = (message: WSMessage) => {
       if (message.type !== "OTP_FAILED") return;
+      const { data } = message as WSOTPFailed;
+      if (data.userId !== userId) return;
       toast.error("OTP verification failed");
     };
 
