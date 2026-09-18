@@ -117,6 +117,7 @@ export function sendOrderPlaced(message: WSOrderPlaced): void {
 
 export function disconnect(): void {
   if (websocket) {
+    manualClose = true;
     websocket.close();
     websocket = null;
   }
