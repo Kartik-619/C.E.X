@@ -35,6 +35,7 @@ const createOrder = (
     symbol: "BTC/USD",
     type: "LIMIT",
     createdAt: Date.now(),
+    lockedAmount: side === "buy" ? price * quantity : quantity,
 });
 
 
@@ -534,6 +535,293 @@ describe("StandardEngine - Trade Integration", () => {
         // Bob got $200 from the sale
         expect(bobUSD.available).toBe(200);
         expect(bobUSD.locked).toBe(0);
+    });
+});
+
+
+// ============================================================
+// Cancel - Releases Locked Funds
+// ============================================================
+
+describe("StandardEngine - Cancel Releases Locked Funds", () => {
+
+    let orderBookStore: inmemory_OrderBookStore;
+    let walletStore: Inmemory_WalletStore;
+
+    let orderBook: OrderBook;
+    let wallet: Wallet;
+    let engine: StandardEngine;
+    let bus: EventManager;
+
+    beforeEach(async () => {
+        orderBookStore = new inmemory_OrderBookStore();
+        orderBook = new OrderBook(orderBookStore);
+
+        walletStore = new Inmemory_WalletStore();
+        wallet = new Wallet(walletStore);
+
+        bus = new EventManager();
+
+        engine = new StandardEngine(orderBook, wallet, bus);
+
+        // Alice starts with $100
+        await wallet.deposit("alice", "USD", 100);
+
+        // Bob starts with 1 BTC
+        await wallet.deposit("bob", "BTC", 1);
+    });
+
+
+    // ========================================================
+    // CANCEL RESTING BUY
+    // ========================================================
+
+    it("should release all locked funds when cancelling a resting BUY order", async () => {
+
+        await wallet.deposit("alice", "USD", 1000); // Alice now has 1100 USD
+
+        const buyOrder = createOrder(
+            1,
+            "buy",
+            "alice",
+            100,
+            3
+        );
+
+        await engine.processOrder(buyOrder);
+
+        await engine.cancelOrder(1);
+
+        const aliceUSD = await wallet.getBalance("alice", "USD");
+
+        expect(aliceUSD.locked).toBe(0);
+        expect(aliceUSD.available).toBe(1100);
+    });
+
+
+    // ========================================================
+    // CANCEL RESTING SELL
+    // ========================================================
+
+    it("should release all locked funds when cancelling a resting SELL order", async () => {
+
+        await wallet.deposit("bob", "BTC", 4); // Bob now has 5 BTC
+
+        const sellOrder = createOrder(
+            1,
+            "sell",
+            "bob",
+            100,
+            3
+        );
+
+        await engine.processOrder(sellOrder);
+
+        await engine.cancelOrder(1);
+
+        const bobBTC = await wallet.getBalance("bob", "BTC");
+
+        expect(bobBTC.locked).toBe(0);
+        expect(bobBTC.available).toBe(5);
+    });
+
+
+    // ========================================================
+    // CANCEL PARTIALLY-FILLED BUY (filled below limit)
+    // ========================================================
+
+    it("should release ALL residual locked funds when a partially-filled BUY order is cancelled", async () => {
+
+        // Bob has 5 BTC, Alice has 600 USD
+        await wallet.deposit("bob", "BTC", 4);
+        await wallet.deposit("alice", "USD", 500);
+
+        // Bob rests a sell at 90 for 2 BTC
+        const sellOrder = createOrder(
+            1,
+            "sell",
+            "bob",
+            90,
+            2
+        );
+
+        await engine.processOrder(sellOrder);
+
+        // Alice buys 5 BTC at 100 (locks 500). Only 2 fill at 90 (costs 180),
+        // so the residual lock is 320 - not 100 * 3 = 300.
+        const buyOrder = createOrder(
+            2,
+            "buy",
+            "alice",
+            100,
+            5
+        );
+
+        await engine.processOrder(buyOrder);
+
+        await engine.cancelOrder(2);
+
+        const aliceUSD = await wallet.getBalance("alice", "USD");
+
+        // 600 - 180 spent = 420; nothing may stay trapped in locked
+        expect(aliceUSD.locked).toBe(0);
+        expect(aliceUSD.available).toBe(420);
+
+        const aliceBTC = await wallet.getBalance("alice", "BTC");
+        expect(aliceBTC.available).toBe(2);
+
+        const bobBTC = await wallet.getBalance("bob", "BTC");
+        expect(bobBTC.locked).toBe(0);
+        expect(bobBTC.available).toBe(3); // Sold 2 of his 5 BTC
+
+        const bobUSD = await wallet.getBalance("bob", "USD");
+        expect(bobUSD.available).toBe(180);
+    });
+
+
+    // ========================================================
+    // CANCEL PARTIALLY-FILLED SELL
+    // ========================================================
+
+    it("should release all remaining locked funds when a partially-filled SELL order is cancelled", async () => {
+
+        // Bob has 5 BTC, Alice has 1100 USD
+        await wallet.deposit("bob", "BTC", 4);
+        await wallet.deposit("alice", "USD", 1000);
+
+        // Bob rests a sell at 100 for 5 BTC
+        const sellOrder = createOrder(
+            1,
+            "sell",
+            "bob",
+            100,
+            5
+        );
+
+        await engine.processOrder(sellOrder);
+
+        // Alice buys 2 BTC at 100 - fills Bob's order partially
+        const buyOrder = createOrder(
+            2,
+            "buy",
+            "alice",
+            100,
+            2
+        );
+
+        await engine.processOrder(buyOrder);
+
+        await engine.cancelOrder(1);
+
+        const bobBTC = await wallet.getBalance("bob", "BTC");
+        expect(bobBTC.locked).toBe(0);
+        expect(bobBTC.available).toBe(3); // Sold 2 of his 5 BTC
+
+        const bobUSD = await wallet.getBalance("bob", "USD");
+        expect(bobUSD.available).toBe(200);
+    });
+
+
+    // ========================================================
+    // FULL FILL BELOW LIMIT RELEASES RESIDUAL
+    // ========================================================
+
+    it("should release residual locked funds when a BUY order is fully filled below its limit", async () => {
+
+        // Bob has 5 BTC, Alice has 600 USD
+        await wallet.deposit("bob", "BTC", 4);
+        await wallet.deposit("alice", "USD", 500);
+
+        // Bob rests a sell at 90 for 5 BTC
+        const sellOrder = createOrder(
+            1,
+            "sell",
+            "bob",
+            90,
+            5
+        );
+
+        await engine.processOrder(sellOrder);
+
+        // Alice buys 5 BTC at 100 - fully fills at 90 (costs 450, not 500)
+        const buyOrder = createOrder(
+            2,
+            "buy",
+            "alice",
+            100,
+            5
+        );
+
+        await engine.processOrder(buyOrder);
+
+        const aliceUSD = await wallet.getBalance("alice", "USD");
+
+        // The 50 USD of price improvement must not remain trapped as locked
+        expect(aliceUSD.locked).toBe(0);
+        expect(aliceUSD.available).toBe(150);
+
+        const aliceBTC = await wallet.getBalance("alice", "BTC");
+        expect(aliceBTC.available).toBe(5);
+    });
+
+
+    // ========================================================
+    // RESTING BUY FILLED LATER BELOW LIMIT
+    // ========================================================
+
+    it("should release ALL residual locked funds when a resting BUY partially filled later below its limit is cancelled", async () => {
+
+        // Alice has 1100 USD, Bob has 3 BTC
+        await wallet.deposit("alice", "USD", 1000);
+        await wallet.deposit("bob", "BTC", 2);
+
+        // Alice rests a buy at 100 for 5 BTC (locks 500)
+        const buyOrder = createOrder(
+            1,
+            "buy",
+            "alice",
+            100,
+            5
+        );
+
+        await engine.processOrder(buyOrder);
+
+        // Bob aggressively sells 2 BTC at 80 - crosses Alice's buy (fills at 80)
+        const sellOrder = createOrder(
+            2,
+            "sell",
+            "bob",
+            80,
+            2
+        );
+
+        await engine.processOrder(sellOrder);
+
+        // Alice's resting buy has residual locked = 500 - 160 = 340,
+        // not 100 * 3 = 300. Cancelling must release the full 340.
+        await engine.cancelOrder(1);
+
+        const aliceUSD = await wallet.getBalance("alice", "USD");
+        expect(aliceUSD.locked).toBe(0);
+        expect(aliceUSD.available).toBe(940); // 1100 - 160 spent
+
+        const aliceBTC = await wallet.getBalance("alice", "BTC");
+        expect(aliceBTC.available).toBe(2);
+
+        const bobUSD = await wallet.getBalance("bob", "USD");
+        expect(bobUSD.available).toBe(160);
+    });
+
+
+    // ========================================================
+    // CANCEL UNKNOWN ORDER
+    // ========================================================
+
+    it("should throw when cancelling a non-existent order", async () => {
+
+        await expect(
+            engine.cancelOrder(999)
+        ).rejects.toThrow("Order can't be found");
     });
 });
 

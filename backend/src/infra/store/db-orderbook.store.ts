@@ -7,9 +7,9 @@ export class DbOrderBookStore implements IOrderBook {
     async placeOrder(order: Order): Promise<Order> {
         const pool = getPool();
         await pool.query(
-            `INSERT INTO orders (order_id, user_id, side, price, quantity, type, symbol, status, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 'OPEN', $8)`,
-            [order.orderId, order.userId, order.side, order.price, order.quantity, order.type, order.symbol, order.createdAt]
+            `INSERT INTO orders (order_id, user_id, side, price, quantity, type, symbol, status, created_at, locked_amount)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'OPEN', $8, $9)`,
+            [order.orderId, order.userId, order.side, order.price, order.quantity, order.type, order.symbol, order.createdAt, order.lockedAmount]
         );
         return order;
     }
@@ -149,12 +149,19 @@ export class DbOrderBookStore implements IOrderBook {
             const tradeQty = Math.min(quantity, matchedQty);
             const remaining = matchedQty - tradeQty;
 
+            //  Track the matched (resting) order's residual lock as it is filled.
+            //  Trades always execute at the seller's price; a resting sell locks base
+            //  per quantity while a resting buy locks quote at the executed price.
+            const matchedSellPrice = matchedRow.side === 'sell' ? matchedPrice : Number(order.price);
+            const lockedConsumed = matchedRow.side === 'sell' ? tradeQty : matchedSellPrice * tradeQty;
+            const newLocked = Math.max(0, Number(matchedRow.locked_amount ?? 0) - lockedConsumed);
+
             let returnedOrder: Order;
 
             if (remaining > 0) {
                 await client.query(
-                    `UPDATE orders SET quantity = $1 WHERE order_id = $2`,
-                    [remaining, matchedRow.order_id]
+                    `UPDATE orders SET quantity = $1, locked_amount = $2 WHERE order_id = $3`,
+                    [remaining, newLocked, matchedRow.order_id]
                 );
                 returnedOrder = this.rowToOrder({ ...matchedRow, quantity: tradeQty });
             } else {
@@ -186,6 +193,7 @@ export class DbOrderBookStore implements IOrderBook {
             type: row.type as 'LIMIT' | 'MARKET',
             symbol: row.symbol,
             createdAt: Number(row.created_at),
+            lockedAmount: Number(row.locked_amount ?? 0),
         };
     }
 }

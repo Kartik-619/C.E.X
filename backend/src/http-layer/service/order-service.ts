@@ -205,7 +205,8 @@ export class OrderService {
             price: dto.price,
             quantity: dto.quantity,
             type: dto.type || 'LIMIT',
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            lockedAmount: dto.side === 'buy' ? dto.price * dto.quantity : dto.quantity
         };
     }
 

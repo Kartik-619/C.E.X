@@ -98,7 +98,7 @@
 
 ### Improve the matching engine & market depth
 - [ ] Market orders with slippage / best-effort fill semantics and dedicated `MARKET` handling tests.
-- [ ] Order cancellation releasing locked funds (currently lock/unlock path partial).
+- [x] Order cancellation releasing locked funds (currently lock/unlock path partial).
 - [ ] Support multiple trading pairs (not just BTC/USD) — `CURRENCIES` already lists USD/BTC/ETH/USDT.
 - [ ] Add candlestick / OHLC aggregation from `TRADE_EXECUTED` history (chart page currently missing — grid has no graph).
 - [ ] Persist trade history + live ticks to DB; seed trade history for richer UI.

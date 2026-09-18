@@ -176,10 +176,17 @@ export class inmemory_OrderBookStore implements IOrderBook {
         //  Determine trade quantity
         const tradeQty = Math.min(quantity, matchedOrder.quantity);
 
+        //  Track the matched (resting) order's residual lock as it is filled.
+        //  Trades always execute at the seller's price; a resting sell locks base
+        //  per quantity while a resting buy locks quote at the executed price.
+        const sellPrice = matchedOrder.side === 'sell' ? matchedOrder.price : order.price;
+        const matchedLockedConsumed = matchedOrder.side === 'sell' ? tradeQty : sellPrice * tradeQty;
+
         //  Update the order IN PLACE (no remove+reinsert)
         if (matchedOrder.quantity > tradeQty) {
             // Partial fill - update quantity in place
             matchedOrder.quantity -= tradeQty;
+            matchedOrder.lockedAmount -= matchedLockedConsumed;
 
             // Re-sort the relevant side
             if (matchedOrder.side === 'buy') {

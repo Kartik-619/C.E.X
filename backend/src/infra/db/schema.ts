@@ -26,13 +26,18 @@ export async function migrate(): Promise<void> {
             type        TEXT NOT NULL CHECK (type IN ('LIMIT', 'MARKET')),
             symbol      TEXT NOT NULL,
             status      TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'PARTIALLY_FILLED', 'FILLED', 'CANCELLED')),
-            created_at  BIGINT NOT NULL
+            created_at  BIGINT NOT NULL,
+            locked_amount NUMERIC NOT NULL DEFAULT 0 CHECK (locked_amount >= 0)
         );
 
         CREATE INDEX IF NOT EXISTS idx_orders_side_price ON orders (side, price);
         CREATE INDEX IF NOT EXISTS idx_orders_symbol ON orders (symbol);
         CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);
         CREATE INDEX IF NOT EXISTS idx_orders_status ON orders (status);
+    `);
+
+    await pool.query(`
+        ALTER TABLE orders ADD COLUMN IF NOT EXISTS locked_amount NUMERIC NOT NULL DEFAULT 0 CHECK (locked_amount >= 0);
     `);
 
     await pool.query(`

@@ -18,5 +18,9 @@ export interface Order{
     type:'LIMIT'|'MARKET',
     createdAt:number,
     quantity:number,
-    symbol:string
+    symbol:string,
+    // Amount currently locked in the wallet for this order.
+    // buy -> quote amount (price * quantity), sell -> base quantity.
+    // Decremented as fills settle so cancellation releases exactly the residual.
+    lockedAmount:number
 }

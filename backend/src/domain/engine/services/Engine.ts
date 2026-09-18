@@ -56,6 +56,13 @@ export class StandardEngine extends AbstractEngine<Order> {
             const trade = this.createTrade(matchedOrder, currentOrder);
             await this.wallet.settleTrade(trade);
 
+            // Track this order's residual lock as fills settle at the executed price
+            if (currentOrder.side === "buy") {
+                currentOrder.lockedAmount -= trade.totalValue;
+            } else {
+                currentOrder.lockedAmount -= trade.quantity;
+            }
+
             currentOrder.quantity -= trade.quantity;
             this.logger.log(LogLevel.DEBUG, `[Engine] Current order remaining: ${currentOrder.quantity}`);
             
@@ -85,6 +92,19 @@ export class StandardEngine extends AbstractEngine<Order> {
             this.logger.log(LogLevel.INFO, `[Engine] Order ${order.orderId} partially filled, ${currentOrder.quantity} remaining`);
             
         } else if (matchedAny) {
+            // Fully filled. A buy filled at a price below its limit still holds
+            // (limitPrice - fillPrice) locked per unit; release that residual.
+            if (currentOrder.lockedAmount > 0) {
+                const [baseAsset, quoteAsset] = currentOrder.symbol.split("/");
+                const residualAsset = currentOrder.side === "buy" ? quoteAsset : baseAsset;
+
+                if (!residualAsset) {
+                    throw new Error(`Invalid trading pair: ${currentOrder.symbol}`);
+                }
+
+                await this.wallet.unlockFunds(currentOrder.userId, residualAsset, currentOrder.lockedAmount);
+                this.logger.log(LogLevel.INFO, `[Engine] Released residual locked funds ${currentOrder.lockedAmount} ${residualAsset} for order ${order.orderId}`);
+            }
             // Fully filled
             this.bus.notify(EventType.ORDER_FILLED, {
                 orderId: order.orderId,
@@ -139,8 +159,10 @@ export class StandardEngine extends AbstractEngine<Order> {
 
         if (order.side === "buy") {
             const amount = order.price * order.quantity;
+            order.lockedAmount = amount;
             await this.wallet.lockFunds(order.userId, quoteAsset, amount);
         } else {
+            order.lockedAmount = order.quantity;
             await this.wallet.lockFunds(order.userId, baseAsset, order.quantity);
         }
     }
@@ -173,7 +195,11 @@ export class StandardEngine extends AbstractEngine<Order> {
         }
 
         const asset = order.side === "buy" ? quoteAsset : baseAsset;
-        const amount = order.side === "buy" ? order.price * order.quantity : order.quantity;
+        // Exact residual lock for tracked orders; nominal fallback for legacy
+        // orders placed before lockedAmount bookkeeping existed.
+        const amount = order.lockedAmount > 0
+            ? order.lockedAmount
+            : (order.side === "buy" ? order.price * order.quantity : order.quantity);
 
         await this.wallet.unlockFunds(order.userId, asset, amount);
         await this.orderBook.cancelOrder(orderId);
@@ -188,7 +214,7 @@ export class StandardEngine extends AbstractEngine<Order> {
             status: 'CANCELLED',
             timestamp: Date.now()
         });
-        this.logger.log(LogLevel.INFO, `[Engine] Successfully cancelled order ${orderId} and unlocked funds`);
+        this.logger.log(LogLevel.INFO, `[Engine] Successfully cancelled order ${orderId} and unlocked ${amount} ${asset}`);
     }
 
     async getBalance(userId: string, asset: string) {
