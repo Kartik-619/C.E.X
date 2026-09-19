@@ -212,13 +212,6 @@ export class DbWalletStore implements IWallet<Balance> {
                 [trade.sellerId, quoteAsset, tradeValue]
             );
 
-            // Record the trade
-            await client.query(
-                `INSERT INTO trades (trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, total_value)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                [trade.tradeId, trade.buyOrderId, trade.sellOrderId, trade.buyerId, trade.sellerId, trade.symbol, trade.price, trade.quantity, trade.totalValue]
-            );
-
             await client.query('COMMIT');
         } catch (error) {
             await client.query('ROLLBACK');

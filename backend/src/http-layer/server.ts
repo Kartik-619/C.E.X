@@ -14,15 +14,19 @@ import { Inmemory_User } from '../infra/store/inmemory-user.store';
 import { DbOrderBookStore } from '../infra/store/db-orderbook.store';
 import { DbWalletStore } from '../infra/store/db-wallet.store';
 import { DbUserStore } from '../infra/store/db-user.store';
+import { DbTradeStore } from '../infra/store/db-trade.store';
+import { Inmemory_TradeStore } from '../infra/store/trade-store';
 import { migrate } from '../infra/db/schema';
 import { closePool } from '../infra/db/connection';
 
 import { OrderService } from './service/order-service';
+import { TradeService } from './service/trade-service';
 import { AuthService } from './service/auth-service';
 import { EmailService } from './service/email-service';
 import { EmailJSProvider } from './service/emailjs.provider';
 import { OtpService } from './service/otp-service';
 import { OrderController } from './controllers/order-controller';
+import { TradeController } from './controllers/trade-controller';
 import { AuthController } from './controllers/auth-controller';
 import { OAuthController } from './controllers/oauth-controller';
 import { OTPController } from './controllers/otp-controller';
@@ -47,6 +51,7 @@ const logger = LoggerFactory.createLogger('console', LogLevel.INFO);
 let orderBookStore: inmemory_OrderBookStore | DbOrderBookStore;
 let walletStore: Inmemory_WalletStore | DbWalletStore;
 let userStore: Inmemory_User | DbUserStore;
+let tradeStore: Inmemory_TradeStore | DbTradeStore;
 
 if (USE_DB) {
     logger.log(LogLevel.INFO, '[Server] Using PostgreSQL stores');
@@ -54,11 +59,13 @@ if (USE_DB) {
     orderBookStore = new DbOrderBookStore();
     walletStore = new DbWalletStore();
     userStore = new DbUserStore();
+    tradeStore = new DbTradeStore();
 } else {
     logger.log(LogLevel.INFO, '[Server] Using in-memory stores');
     orderBookStore = new inmemory_OrderBookStore(logger);
     walletStore = new Inmemory_WalletStore();
     userStore = new Inmemory_User();
+    tradeStore = new Inmemory_TradeStore();
 }
 
 const orderBook = new OrderBook(orderBookStore, logger);
@@ -73,10 +80,11 @@ wsServer.start();
 const wsBroadcaster = new WebSocketBroadcaster(bus, wsServer, logger);
 
 // 5. Create Engine with EventBus
-const engine = new StandardEngine(orderBook, wallet, bus);
+const engine = new StandardEngine(orderBook, wallet, bus, tradeStore);
 
 // 6. Service Layer
 const orderService = new OrderService(engine);
+const tradeService = new TradeService(tradeStore);
 const authService = new AuthService(userStore, walletStore);
 
 // 7. Email / OTP services
@@ -97,6 +105,7 @@ const otpService = new OtpService(userStore, emailService);
 
 // 8. Controller Layer
 const orderController = new OrderController(orderService);
+const tradeController = new TradeController(tradeService);
 const authController = new AuthController(authService);
 const oauthController = new OAuthController(authService);
 const otpController = new OTPController(otpService);
@@ -105,7 +114,7 @@ const otpController = new OTPController(otpService);
 const authMiddleware = new AuthMiddleware(authService);
 
 // 10. Routes
-const routes = new Routes(orderController, authController, oauthController, otpController);
+const routes = new Routes(orderController, authController, oauthController, otpController, tradeController);
 
 // 11. Create router adapter
 const router: AppRouter = {
@@ -124,7 +133,7 @@ const router: AppRouter = {
 routes.register(router);
 
 // 13. Seed the database with test users
-await seedDatabase(walletStore, logger);
+await seedDatabase(walletStore, tradeStore, logger);
 
 // 14. Protected route handler wrapper
 const requireAuth = authMiddleware.createHandler.bind(authMiddleware);
@@ -183,6 +192,12 @@ const server = serve({
                 response = await oauthController.providers(request);
             } else if (path === '/api/orderbook' && method === 'GET') {
                 response = await orderController.getOrderBook(request);
+            } else if (path === '/api/trades' && method === 'GET') {
+                response = await tradeController.getRecentTrades(request);
+            } else if (path === '/api/trades/me' && method === 'GET') {
+                response = await requireAuth((req, auth) => tradeController.getUserTrades(req, auth))(request);
+            } else if (path === '/api/ticks' && method === 'GET') {
+                response = await tradeController.getTicks(request);
             } else if (path === '/api/orders' && method === 'GET') {
                 response = await requireAuth((req, auth) => orderController.getUserOrders(req, auth))(request);
             } else if (path === '/api/orders' && method === 'POST') {
@@ -233,6 +248,9 @@ logger.log(LogLevel.INFO, `   DELETE /api/orders                  - Cancel an or
 logger.log(LogLevel.INFO, `   GET    /api/balance/:userId         - Get balance (auth)`);
 logger.log(LogLevel.INFO, `   POST   /api/balance/deposit        - Deposit funds (auth)`);
 logger.log(LogLevel.INFO, `   GET    /api/orderbook               - Get order book`);
+logger.log(LogLevel.INFO, `   GET    /api/trades                  - Recent market trades`);
+logger.log(LogLevel.INFO, `   GET    /api/trades/me               - Current user's trades (auth)`);
+logger.log(LogLevel.INFO, `   GET    /api/ticks                   - Recent price ticks`);
 logger.log(LogLevel.INFO, `   GET    /api/health                  - Health check`);
 logger.log(LogLevel.INFO, `WebSocket running on ws://localhost:3011`);
 

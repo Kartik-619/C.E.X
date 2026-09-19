@@ -5,19 +5,24 @@ import type { OrderController } from '../controllers/order-controller';
 import type { AuthController } from '../controllers/auth-controller';
 import type { OAuthController } from '../controllers/oauth-controller';
 import type { OTPController } from '../controllers/otp-controller';
+import type { TradeController } from '../controllers/trade-controller';
 import { HealthRoutes } from './health.routes';
 import { OrderRoutes } from './order.routes';
 import { AuthRoutes } from './auth.routes';
+import { TradeRoutes } from './trade.routes';
 
 export class Routes {
     private modules: RouteModule[];
 
-    constructor(orderController: OrderController, authController: AuthController, oauthController: OAuthController, otpController: OTPController) {
+    constructor(orderController: OrderController, authController: AuthController, oauthController: OAuthController, otpController: OTPController, tradeController?: TradeController) {
         this.modules = [
             new HealthRoutes(),
             new AuthRoutes(authController, oauthController, otpController),
             new OrderRoutes(orderController),
         ];
+        if (tradeController) {
+            this.modules.push(new TradeRoutes(tradeController));
+        }
     }
 
     register(router: AppRouter): void {

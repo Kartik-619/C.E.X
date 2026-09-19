@@ -8,6 +8,8 @@ import type {
   AuthResponse,
   RegisterRequest,
   LoginRequest,
+  MarketTrade,
+  TickEntry,
 } from "../types/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3010/api";
@@ -207,6 +209,36 @@ export async function getUserOrders(): Promise<OrderResponse[]> {
   }
 
   return response.json() as Promise<OrderResponse[]>;
+}
+
+// ── Market Data API ─────────────────────────────────────────────────
+
+export async function getTradeHistory(symbol = "BTC/USD", limit = 20): Promise<MarketTrade[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/trades?symbol=${encodeURIComponent(symbol)}&limit=${limit}`,
+    { method: "GET", headers: authHeaders() }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to fetch trade history"));
+  }
+
+  return response.json() as Promise<MarketTrade[]>;
+}
+
+export async function getTicks(symbol = "BTC/USD", limit = 50): Promise<TickEntry[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/ticks?symbol=${encodeURIComponent(symbol)}&limit=${limit}`,
+    { method: "GET", headers: authHeaders() }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => undefined);
+    throw new Error(extractErrorMessage(errorData, "Failed to fetch market ticks"));
+  }
+
+  return response.json() as Promise<TickEntry[]>;
 }
 
 // ── Public API ──────────────────────────────────────────────────────

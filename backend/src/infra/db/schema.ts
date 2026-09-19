@@ -69,4 +69,17 @@ export async function migrate(): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_trades_seller ON trades (seller_id);
     `);
 
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS ticks (
+            tick_id     TEXT PRIMARY KEY,
+            trade_id    TEXT NOT NULL,
+            symbol      TEXT NOT NULL,
+            price       NUMERIC NOT NULL CHECK (price > 0),
+            quantity    NUMERIC NOT NULL CHECK (quantity >= 0),
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ticks_symbol_created ON ticks (symbol, created_at DESC);
+    `);
+
 }

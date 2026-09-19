@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { TradeHistory } from "./TradeHistory";
+import { getTradeHistory } from "@/services/api";
 
 const mockSubscribe = vi.fn();
 const mockUnsubscribe = vi.fn();
+
+vi.mock("@/services/api", () => ({
+  getTradeHistory: vi.fn(),
+  getTicks: vi.fn(),
+}));
 
 vi.mock("@/services/websocket", () => ({
   subscribe: (...args: unknown[]) => mockSubscribe(...args),
@@ -15,6 +21,24 @@ vi.mock("@/context/UserContext", () => ({
 }));
 
 import type { WSMessage } from "@/types/websocket";
+import type { MarketTrade } from "@/types/api";
+
+const mockGetTradeHistory = vi.mocked(getTradeHistory);
+
+function marketTrade(overrides: Partial<MarketTrade> = {}): MarketTrade {
+  return {
+    tradeId: "seed-trade-1",
+    symbol: "BTC/USD",
+    price: 48000,
+    quantity: 0.5,
+    totalValue: 24000,
+    timestamp: "2026-09-18T10:00:00.000Z",
+    buyerId: "alice",
+    sellerId: "bob",
+    side: null,
+    ...overrides,
+  };
+}
 
 function tradeMessage(overrides: Partial<Record<string, unknown>>): WSMessage {
   return {
@@ -39,22 +63,46 @@ describe("TradeHistory", () => {
   beforeEach(() => {
     mockSubscribe.mockReset();
     mockUnsubscribe.mockReset();
+    mockGetTradeHistory.mockReset();
   });
 
   it("renders a loading placeholder while fetching", () => {
+    mockGetTradeHistory.mockImplementation(
+      () => new Promise(() => { /* never resolves */ })
+    );
     render(<TradeHistory />);
-    expect(screen.getByText("Trade History")).toBeInTheDocument();
+    expect(screen.getByText("Recent Trades")).toBeInTheDocument();
+  });
+
+  it("shows an error state when the feed fails to load", async () => {
+    mockGetTradeHistory.mockRejectedValue(new Error("boom"));
+    render(<TradeHistory />);
+
+    expect(await screen.findByText(/couldn't load trade history/i)).toBeInTheDocument();
+    expect(screen.getByText("boom")).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no trades", async () => {
+    mockGetTradeHistory.mockResolvedValue([]);
     render(<TradeHistory />);
+
     expect(await screen.findByText(/no trades yet/i)).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.queryByText(/no trades yet/i)).toBeInTheDocument();
-    });
   });
 
-  it("marks a trade as BUY when the user is the buyer", async () => {
+  it("renders the market feed and marks unrelated trades as neutral", async () => {
+    mockGetTradeHistory.mockResolvedValue([
+      marketTrade({ buyerId: "alice", sellerId: "bob", side: null }),
+    ]);
+    render(<TradeHistory />);
+
+    expect(await screen.findByText("48,000.00")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.queryByText("BUY")).not.toBeInTheDocument();
+    expect(screen.queryByText("SELL")).not.toBeInTheDocument();
+  });
+
+  it("marks a feed trade as BUY when the user is the buyer", async () => {
+    mockGetTradeHistory.mockResolvedValue([]);
     mockSubscribe.mockImplementation((event: string, cb: (msg: WSMessage) => void) => {
       if (event === "TRADE_EXECUTED") cb(tradeMessage({}));
     });
@@ -65,7 +113,8 @@ describe("TradeHistory", () => {
     expect(screen.queryByText("SELL")).not.toBeInTheDocument();
   });
 
-  it("marks a trade as SELL when the user is the seller", async () => {
+  it("marks a feed trade as SELL when the user is the seller", async () => {
+    mockGetTradeHistory.mockResolvedValue([]);
     mockSubscribe.mockImplementation((event: string, cb: (msg: WSMessage) => void) => {
       if (event === "TRADE_EXECUTED")
         cb(tradeMessage({ buyerId: "alice", sellerId: "user-1234" }));
@@ -76,16 +125,13 @@ describe("TradeHistory", () => {
     expect(screen.queryByText("BUY")).not.toBeInTheDocument();
   });
 
-  it("ignores trades that do not involve the current user", async () => {
-    mockSubscribe.mockImplementation((event: string, cb: (msg: WSMessage) => void) => {
-      if (event === "TRADE_EXECUTED")
-        cb(tradeMessage({ buyerId: "alice", sellerId: "bob" }));
-    });
-    render(<TradeHistory />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/no trades yet/i)).toBeInTheDocument();
-    });
-    expect(screen.queryByText("48,000.00")).not.toBeInTheDocument();
+  it("unsubscribes from the live feed on unmount", () => {
+    mockGetTradeHistory.mockResolvedValue([]);
+    const { unmount } = render(<TradeHistory />);
+    unmount();
+    expect(mockUnsubscribe).toHaveBeenCalledWith(
+      "TRADE_EXECUTED",
+      expect.any(Function)
+    );
   });
 });

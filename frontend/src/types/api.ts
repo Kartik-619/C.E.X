@@ -60,6 +60,26 @@ export interface TradeHistoryEntry {
   orderId: string;
 }
 
+export interface MarketTrade {
+  tradeId: string;
+  symbol: string;
+  price: number;
+  quantity: number;
+  totalValue: number;
+  timestamp: string;
+  buyerId: string;
+  sellerId: string;
+  side: "buy" | "sell" | null;
+}
+
+export interface TickEntry {
+  tradeId: string;
+  symbol: string;
+  price: number;
+  quantity: number;
+  timestamp: number;
+}
+
 // ── Auth ────────────────────────────────────────────────────────────
 
 export interface User {

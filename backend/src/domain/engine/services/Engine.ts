@@ -5,6 +5,7 @@ import type { IOrderBook, Order } from "../interface/IOrderBook";
 import type { IWallet } from "../interface/Iwallet";
 import type { Balance } from "../interface/Ibalance";
 import type { ITrade } from "../interface/ITrade";
+import type { ITradeStore } from "../interface/ITradeStore";
 
 import { LoggerFactory } from "../../../infra/logging/logger.factory";
 import { LogLevel } from "../../../infra/logging/log-level";
@@ -15,9 +16,11 @@ import { EventType } from "../../events/Ibroadcast.orderbook";
 export class StandardEngine extends AbstractEngine<Order> {
 
     private readonly logger: Logger;
+    private readonly tradeStore?: ITradeStore;
 
-    constructor(orderBook: IOrderBook, wallet: IWallet<Balance>, bus: EventManager) {
+    constructor(orderBook: IOrderBook, wallet: IWallet<Balance>, bus: EventManager, tradeStore?: ITradeStore) {
         super(orderBook, wallet, bus);
+        this.tradeStore = tradeStore;
         this.logger = LoggerFactory.createLogger('console', LogLevel.INFO);
     }
 
@@ -55,6 +58,19 @@ export class StandardEngine extends AbstractEngine<Order> {
             // The order book already updated the remaining quantity in place
             const trade = this.createTrade(matchedOrder, currentOrder);
             await this.wallet.settleTrade(trade);
+
+            // Persist the executed trade and its price tick after settlement
+            if (this.tradeStore) {
+                await this.tradeStore.recordTrade(trade);
+                await this.tradeStore.recordTick({
+                    tickId: crypto.randomUUID(),
+                    tradeId: trade.tradeId,
+                    symbol: trade.symbol,
+                    price: trade.price,
+                    quantity: trade.quantity,
+                    timestamp: trade.timestamp.getTime()
+                });
+            }
 
             // Track this order's residual lock as fills settle at the executed price
             if (currentOrder.side === "buy") {
@@ -318,31 +334,34 @@ export class StandardEngine extends AbstractEngine<Order> {
         const price = sellOrder.price;
         const quantity = Math.min(buyOrder.quantity, sellOrder.quantity);
         const totalValue = price * quantity;
+        const timestamp = new Date();
+
+        const trade: ITrade = {
+            tradeId: crypto.randomUUID(),
+            buyOrderId: buyOrder.orderId,
+            sellOrderId: sellOrder.orderId,
+            buyerId: buyOrder.userId,
+            sellerId: sellOrder.userId,
+            symbol: buyOrder.symbol,
+            price: price,
+            quantity: quantity,
+            totalValue: totalValue,
+            timestamp: timestamp
+        };
 
         this.bus.notify(EventType.TRADE_EXECUTED, {
-            tradeId: crypto.randomUUID(),
-            buyOrderId: buyOrder.orderId,
-            sellOrderId: sellOrder.orderId,
-            buyerId: buyOrder.userId,
-            sellerId: sellOrder.userId,
-            symbol: buyOrder.symbol,
-            price: price,
-            quantity: quantity,
-            totalValue: totalValue,
-            timestamp: new Date()
+            tradeId: trade.tradeId,
+            buyOrderId: trade.buyOrderId,
+            sellOrderId: trade.sellOrderId,
+            buyerId: trade.buyerId,
+            sellerId: trade.sellerId,
+            symbol: trade.symbol,
+            price: trade.price,
+            quantity: trade.quantity,
+            totalValue: trade.totalValue,
+            timestamp: trade.timestamp
         });
 
-        return {
-            tradeId: crypto.randomUUID(),
-            buyOrderId: buyOrder.orderId,
-            sellOrderId: sellOrder.orderId,
-            buyerId: buyOrder.userId,
-            sellerId: sellOrder.userId,
-            symbol: buyOrder.symbol,
-            price: price,
-            quantity: quantity,
-            totalValue: totalValue,
-            timestamp: new Date()
-        };
+        return trade;
     }
 }
