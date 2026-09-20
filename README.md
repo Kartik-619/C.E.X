@@ -1,6 +1,6 @@
-# C.E.X — Cloud-based Crypto Exchange Demo
+# C.E.X —Centralized Crypto Exchange
 
-A centralized cryptocurrency exchange demo: order-book matching engine, per-user wallets with fund locking, JWT + OTP authentication, OAuth (Google / GitHub), a live WebSocket feed, and a React dashboard to trade against it.
+A centralized cryptocurrency exchange : order-book matching engine, per-user wallets with fund locking, JWT + OTP authentication, OAuth (Google / GitHub), a live WebSocket feed, and a React dashboard to trade against it.
 
 The project is a **monorepo with two workspaces**:
 
