@@ -3,9 +3,12 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { EmailService } from '../../http-layer/service/email-service';
 import { EmailJSProvider } from '../../http-layer/service/emailjs.provider';
+import { ConsoleOtpProvider } from '../../http-layer/service/console-email.provider';
+import { EmailProviderFactory } from '../../http-layer/service/email-provider.factory';
 import type { IEmailProvider, EmailTemplateParams } from '../../http-layer/service/email-provider.interface';
 import { OtpService } from '../../http-layer/service/otp-service';
 import { OTPService } from '../../infra/auth/otp';
+import { Logger } from '../../infra/logging/logger';
 import { LoggerFactory } from '../../infra/logging/logger.factory';
 import { LogLevel } from '../../infra/logging/log-level';
 import type { IUserStore } from '../../infra/store/Iuser.store';
@@ -158,5 +161,79 @@ describe('EmailJSProvider', () => {
         } finally {
             globalThis.fetch = originalFetch;
         }
+    });
+});
+
+class CapturingLogger extends Logger {
+    readonly logs: { level: LogLevel; message: string }[] = [];
+
+    constructor() {
+        super(LogLevel.INFO);
+    }
+
+    log(level: LogLevel, message: string): void {
+        if (this.shouldLog(level)) {
+            this.logs.push({ level, message });
+        }
+    }
+}
+
+describe('ConsoleOtpProvider', () => {
+    let logger: CapturingLogger;
+    let provider: ConsoleOtpProvider;
+
+    beforeEach(() => {
+        logger = new CapturingLogger();
+        provider = new ConsoleOtpProvider(logger);
+    });
+
+    it('should resolve without sending an email', async () => {
+        await expect(provider.sendTemplate({ to_email: 'alice@test.com', to_name: 'alice', otp: '1234' })).resolves.toBeUndefined();
+    });
+
+    it('should log the OTP and recipient to the console', async () => {
+        await provider.sendTemplate({ to_email: 'alice@test.com', to_name: 'alice', otp: '5678' });
+
+        const otpLog = logger.logs.find((entry) => entry.message.includes('5678'));
+        expect(otpLog).toBeDefined();
+        expect(otpLog?.message).toContain('alice@test.com');
+        expect(logger.logs.some((entry) => entry.message.includes('not actually sent'))).toBe(true);
+    });
+});
+
+describe('EmailProviderFactory', () => {
+    const envKeys = ['EMAIL_PROVIDER', 'EMAIL_SERVICE_ID', 'EMAIL_TEMPLATE_ID', 'EMAIL_PUBLIC_KEY', 'EMAIL_SERVICE_KEY'];
+
+    afterEach(() => {
+        for (const key of envKeys) {
+            delete process.env[key];
+        }
+    });
+
+    it('should return ConsoleOtpProvider when EMAIL_PROVIDER is console', () => {
+        process.env.EMAIL_PROVIDER = 'console';
+
+        expect(EmailProviderFactory.create()).toBeInstanceOf(ConsoleOtpProvider);
+    });
+
+    it('should return EmailJSProvider when EMAIL_PROVIDER is emailjs', () => {
+        process.env.EMAIL_PROVIDER = 'emailjs';
+        process.env.EMAIL_SERVICE_ID = 'service_abc';
+        process.env.EMAIL_TEMPLATE_ID = 'template_abc';
+        process.env.EMAIL_PUBLIC_KEY = 'public_key';
+
+        expect(EmailProviderFactory.create()).toBeInstanceOf(EmailJSProvider);
+    });
+
+    it('should return EmailJSProvider when EMAIL_PROVIDER is unset but EmailJS credentials exist', () => {
+        process.env.EMAIL_SERVICE_ID = 'service_abc';
+        process.env.EMAIL_TEMPLATE_ID = 'template_abc';
+        process.env.EMAIL_PUBLIC_KEY = 'public_key';
+
+        expect(EmailProviderFactory.create()).toBeInstanceOf(EmailJSProvider);
+    });
+
+    it('should fall back to ConsoleOtpProvider when EMAIL_PROVIDER is unset and no EmailJS credentials exist', () => {
+        expect(EmailProviderFactory.create()).toBeInstanceOf(ConsoleOtpProvider);
     });
 });

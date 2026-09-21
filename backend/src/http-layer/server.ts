@@ -23,7 +23,7 @@ import { OrderService } from './service/order-service';
 import { TradeService } from './service/trade-service';
 import { AuthService } from './service/auth-service';
 import { EmailService } from './service/email-service';
-import { EmailJSProvider } from './service/emailjs.provider';
+import { EmailProviderFactory } from './service/email-provider.factory';
 import { OtpService } from './service/otp-service';
 import { OrderController } from './controllers/order-controller';
 import { TradeController } from './controllers/trade-controller';
@@ -88,12 +88,9 @@ const tradeService = new TradeService(tradeStore);
 const authService = new AuthService(userStore, walletStore);
 
 // 7. Email / OTP services
-const emailProvider = new EmailJSProvider({
-    serviceId: process.env.EMAIL_SERVICE_ID ?? '',
-    templateId: process.env.EMAIL_TEMPLATE_ID ?? '',
-    publicKey: process.env.EMAIL_PUBLIC_KEY ?? '',
-    privateKey: process.env.EMAIL_SERVICE_KEY,
-});
+const emailMode = (process.env.EMAIL_PROVIDER ?? '').toLowerCase().trim();
+const emailProvider = EmailProviderFactory.create();
+logger.log(LogLevel.INFO, `[Server] Email provider: ${emailMode === 'console' || emailMode === '' ? 'console (no quota, OTP logged)' : `emailjs (mode: ${emailMode})`}`);
 const infraOtpService = new OTPService(logger);
 const emailService = new EmailService(
     emailProvider,
