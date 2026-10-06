@@ -1,7 +1,24 @@
 import { getToken } from "./api";
 import type { WSMessage, WSEventType, WSOrderPlaced } from "../types/websocket";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3011";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3010/api";
+
+// Single access point: the WS endpoint shares the HTTP API origin unless
+// NEXT_PUBLIC_WS_URL explicitly overrides it.
+function deriveWsUrl(): string {
+  try {
+    const url = new URL(API_BASE_URL);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.pathname = "/";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return "ws://localhost:3010";
+  }
+}
+
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || deriveWsUrl();
 
 function buildWsUrl(): string {
   const token = getToken();

@@ -35,7 +35,7 @@ import { Routes } from './routes/index';
 import type { AppRouter } from './routes/route.interface';
 import { seedDatabase } from '../tests/seed/seed';
 import { EventManager } from '../domain/events/event-bus';
-import { WebsocketServer } from '../infra/ws/ws-server';
+import { WebsocketServer, type UpgradableServer } from '../infra/ws/ws-server';
 import { WebSocketBroadcaster } from '../domain/events/ws-broadcast.orderbook';
 import { LoggerFactory } from '../infra/logging/logger.factory';
 import { LogLevel } from '../infra/logging/log-level';
@@ -72,9 +72,8 @@ const orderBook = new OrderBook(orderBookStore, logger);
 const wallet = new Wallet(walletStore);
 const bus = new EventManager(logger);
 
-// 3. Create WebSocket Server
-const wsServer = new WebsocketServer(3011, logger, new JwtTokenVerifier());
-wsServer.start();
+// 3. Create WebSocket layer (attaches to the single HTTP server below)
+const wsServer = new WebsocketServer(logger, new JwtTokenVerifier());
 
 // 4. Create WebSocket Broadcaster (connects EventBus → WebSocket)
 const wsBroadcaster = new WebSocketBroadcaster(bus, wsServer, logger);
@@ -135,10 +134,11 @@ await seedDatabase(walletStore, tradeStore, logger);
 // 14. Protected route handler wrapper
 const requireAuth = authMiddleware.createHandler.bind(authMiddleware);
 
-// 15. Server with manual routing
+// 15. Single server: HTTP API + WebSocket share one port/access point
 const server = serve({
     port: 3010,
-    async fetch(request: Request) {
+    websocket: wsServer.handlers,
+    async fetch(request: Request, server: UpgradableServer) {
         const url = new URL(request.url);
         const method = request.method;
         const path = url.pathname;
@@ -149,6 +149,11 @@ const server = serve({
             'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         };
+
+        // WebSocket upgrades share this server (single access point)
+        if (wsServer.isUpgradeRequest(request)) {
+            return wsServer.handleUpgrade(request, server);
+        }
 
         if (method === 'OPTIONS') {
             return new Response(null, { headers });
@@ -249,7 +254,7 @@ logger.log(LogLevel.INFO, `   GET    /api/trades                  - Recent marke
 logger.log(LogLevel.INFO, `   GET    /api/trades/me               - Current user's trades (auth)`);
 logger.log(LogLevel.INFO, `   GET    /api/ticks                   - Recent price ticks`);
 logger.log(LogLevel.INFO, `   GET    /api/health                  - Health check`);
-logger.log(LogLevel.INFO, `WebSocket running on ws://localhost:3011`);
+logger.log(LogLevel.INFO, `WebSocket attached to ws://localhost:${server.port} (same port as HTTP)`);
 
 // Graceful shutdown
 const shutdown = async () => {

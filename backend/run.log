@@ -1,0 +1,52 @@
+[CONSOLE] [INFO] [Server] Using in-memory stores
+[CONSOLE] [INFO] [EventBus] Subscribed listener for event: ORDER_PLACED (listeners: 1)
+[CONSOLE] [INFO] [EventBus] Subscribed listener for event: TRADE_EXECUTED (listeners: 1)
+[CONSOLE] [INFO] [EventBus] Subscribed listener for event: ORDER_FILLED (listeners: 1)
+[CONSOLE] [INFO] [EventBus] Subscribed listener for event: ORDER_CANCELLED (listeners: 1)
+[CONSOLE] [INFO] [EventBus] Subscribed listener for event: ORDER_PENDING (listeners: 1)
+[CONSOLE] [INFO] [EventBus] Subscribed listener for event: ORDER_FAILED (listeners: 1)
+[CONSOLE] [INFO] [EventBus] Subscribed listener for event: OTPASKED (listeners: 1)
+[CONSOLE] [INFO] [EventBus] Subscribed listener for event: OTP_FAILED (listeners: 1)
+[CONSOLE] [INFO] [Server] Email provider: console (no quota, OTP logged)
+[CONSOLE] [INFO] [Router] Registered GET /api/health
+[CONSOLE] [INFO] [Router] Registered POST /api/auth/register
+[CONSOLE] [INFO] [Router] Registered POST /api/auth/login
+[CONSOLE] [INFO] [Router] Registered POST /api/auth/otp/request
+[CONSOLE] [INFO] [Router] Registered POST /api/auth/otp/verify
+[CONSOLE] [INFO] [Router] Registered GET /api/auth/oauth
+[CONSOLE] [INFO] [Router] Registered GET /api/auth/oauth/callback
+[CONSOLE] [INFO] [Router] Registered GET /api/auth/oauth/providers
+[CONSOLE] [INFO] [Router] Registered POST /api/orders
+[CONSOLE] [INFO] [Router] Registered POST /api/orders/add
+[CONSOLE] [INFO] [Router] Registered DELETE /api/orders
+[CONSOLE] [INFO] [Router] Registered GET /api/orders
+[CONSOLE] [INFO] [Router] Registered GET /api/balance/:userId
+[CONSOLE] [INFO] [Router] Registered POST /api/balance/deposit
+[CONSOLE] [INFO] [Router] Registered GET /api/orderbook
+[CONSOLE] [INFO] [Router] Registered GET /api/trades
+[CONSOLE] [INFO] [Router] Registered GET /api/trades/me
+[CONSOLE] [INFO] [Router] Registered GET /api/ticks
+[CONSOLE] [INFO] [Seed] Seeded 60 historical trades + ticks for BTC/USD
+[CONSOLE] [INFO] [Seed] Database seeded
+[CONSOLE] [INFO] Server running on http://localhost:3010
+[CONSOLE] [INFO] Storage: In-Memory
+[CONSOLE] [INFO] Endpoints:
+[CONSOLE] [INFO]    POST   /api/auth/register          - Register a new user
+[CONSOLE] [INFO]    POST   /api/auth/login             - Login
+[CONSOLE] [INFO]    POST   /api/auth/otp/request      - Request OTP via email
+[CONSOLE] [INFO]    POST   /api/auth/otp/verify        - Verify OTP
+[CONSOLE] [INFO]    GET    /api/auth/oauth              - Initiate OAuth flow
+[CONSOLE] [INFO]    GET    /api/auth/oauth/callback     - OAuth callback
+[CONSOLE] [INFO]    GET    /api/auth/oauth/providers    - List configured OAuth providers
+[CONSOLE] [INFO]    POST   /api/orders                 - Place an order (auth)
+[CONSOLE] [INFO]    GET    /api/orders                  - List user's open orders (auth)
+[CONSOLE] [INFO]    POST   /api/orders/add             - Add order to book (auth)
+[CONSOLE] [INFO]    DELETE /api/orders                  - Cancel an order (auth)
+[CONSOLE] [INFO]    GET    /api/balance/:userId         - Get balance (auth)
+[CONSOLE] [INFO]    POST   /api/balance/deposit        - Deposit funds (auth)
+[CONSOLE] [INFO]    GET    /api/orderbook               - Get order book
+[CONSOLE] [INFO]    GET    /api/trades                  - Recent market trades
+[CONSOLE] [INFO]    GET    /api/trades/me               - Current user's trades (auth)
+[CONSOLE] [INFO]    GET    /api/ticks                   - Recent price ticks
+[CONSOLE] [INFO]    GET    /api/health                  - Health check
+[CONSOLE] [INFO] WebSocket attached to ws://localhost:3010 (same port as HTTP)

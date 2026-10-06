@@ -7,6 +7,6 @@ RUN bun install --frozen-lockfile
 
 COPY . .
 
-EXPOSE 3010 3011
+EXPOSE 3010
 
 CMD ["bun", "run", "index.ts"]
