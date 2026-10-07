@@ -14,5 +14,6 @@ export interface IWallet <T>{
     
     // Administrative operations
     deposit(userId: string, asset: string, amount: number): Promise<void>;
+    createWallet(userId: string): Promise<void>;
    // initialize(): Promise<void>;
   }

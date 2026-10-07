@@ -18,9 +18,7 @@ export class AuthService {
         const passwordHash = await PasswordService.hash(password);
         const user = await this.userStore.createUser(username, email, passwordHash);
 
-        if ('createWallet' in this.walletStore && typeof (this.walletStore as any).createWallet === 'function') {
-            await (this.walletStore as any).createWallet(user.id);
-        }
+        await this.walletStore.createWallet(user.id);
 
         const token = JWTService.generate({
             userId: user.id,
@@ -70,9 +68,7 @@ export class AuthService {
                 profile.providerUserId,
             );
 
-            if ('createWallet' in this.walletStore && typeof (this.walletStore as any).createWallet === 'function') {
-                await (this.walletStore as any).createWallet(user.id);
-            }
+            await this.walletStore.createWallet(user.id);
         }
 
         const token = JWTService.generate({

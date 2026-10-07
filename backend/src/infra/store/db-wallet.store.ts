@@ -1,14 +1,23 @@
 import type { IWallet } from "../../domain/engine/interface/Iwallet";
 import type { Balance } from "../../domain/engine/interface/Ibalance";
 import type { ITrade } from "../../domain/engine/interface/ITrade";
+import type { Pool } from "pg";
 import { getPool } from "../db/connection";
+import { DEFAULT_WALLET_ASSETS } from "./wallet-assets";
+
+type PoolFactory = () => Pool;
 
 export class DbWalletStore implements IWallet<Balance> {
+    private readonly poolFactory: PoolFactory;
+
+    constructor(poolFactory: PoolFactory = getPool) {
+        this.poolFactory = poolFactory;
+    }
 
     async getBalance(userId: string, asset: string): Promise<Balance> {
         if (!userId) throw new Error("Invalid User");
 
-        const pool = getPool();
+        const pool = this.poolFactory();
         const result = await pool.query(
             `SELECT available, locked FROM balances WHERE user_id = $1 AND asset = $2`,
             [userId, asset]
@@ -34,7 +43,7 @@ export class DbWalletStore implements IWallet<Balance> {
     async exists(userId: string): Promise<boolean> {
         if (!userId) throw new Error("Invalid User");
 
-        const pool = getPool();
+        const pool = this.poolFactory();
         const result = await pool.query(
             `SELECT 1 FROM balances WHERE user_id = $1 LIMIT 1`,
             [userId]
@@ -45,7 +54,7 @@ export class DbWalletStore implements IWallet<Balance> {
     async lockFunds(userId: string, asset: string, amount: number): Promise<void> {
         if (!userId) throw new Error("Invalid User");
 
-        const pool = getPool();
+        const pool = this.poolFactory();
         const client = await pool.connect();
 
         try {
@@ -87,7 +96,7 @@ export class DbWalletStore implements IWallet<Balance> {
     async unlockFunds(userId: string, asset: string, amount: number): Promise<void> {
         if (!userId) throw new Error("Invalid User");
 
-        const pool = getPool();
+        const pool = this.poolFactory();
         const client = await pool.connect();
 
         try {
@@ -142,7 +151,7 @@ export class DbWalletStore implements IWallet<Balance> {
         }
 
         const tradeValue = trade.price * trade.quantity;
-        const pool = getPool();
+        const pool = this.poolFactory();
         const client = await pool.connect();
 
         try {
@@ -224,7 +233,7 @@ export class DbWalletStore implements IWallet<Balance> {
     async deposit(userId: string, asset: string, amount: number): Promise<void> {
         if (!userId) throw new Error("Invalid User");
 
-        const pool = getPool();
+        const pool = this.poolFactory();
         await pool.query(
             `INSERT INTO balances (user_id, asset, available, locked)
              VALUES ($1, $2, $3, 0)
@@ -236,6 +245,14 @@ export class DbWalletStore implements IWallet<Balance> {
 
     async createWallet(userId: string): Promise<void> {
         if (!userId) throw new Error("Invalid User");
-        // Wallets are created lazily on first deposit or balance check
+
+        const pool = this.poolFactory();
+        await pool.query(
+            `INSERT INTO balances (user_id, asset, available, locked)
+             SELECT $1::text, a.asset, 0, 0
+             FROM unnest($2::text[]) AS a(asset)
+             ON CONFLICT (user_id, asset) DO NOTHING`,
+            [userId, DEFAULT_WALLET_ASSETS]
+        );
     }
 }

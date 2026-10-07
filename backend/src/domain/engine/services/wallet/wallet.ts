@@ -18,9 +18,7 @@ export class Wallet implements IWallet<Balance> {
     }
 
     async createWallet(userId: string): Promise<void> {
-        if ('createWallet' in this.store && typeof (this.store as any).createWallet === 'function') {
-            return await (this.store as any).createWallet(userId);
-        }
+        await this.store.createWallet(userId);
     }
 
     async checkBalance(userId: string, asset: string, amount: number): Promise<boolean> {

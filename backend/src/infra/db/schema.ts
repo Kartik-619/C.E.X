@@ -1,4 +1,5 @@
 import { getPool } from './connection';
+import { DEFAULT_WALLET_ASSETS } from '../store/wallet-assets';
 
 export async function migrate(): Promise<void> {
     const pool = getPool();
@@ -81,5 +82,16 @@ export async function migrate(): Promise<void> {
 
         CREATE INDEX IF NOT EXISTS idx_ticks_symbol_created ON ticks (symbol, created_at DESC);
     `);
+
+    await pool.query(`
+        INSERT INTO balances (user_id, asset, available, locked)
+        SELECT u.id, a.asset, 0, 0
+        FROM users u
+        CROSS JOIN unnest($1::text[]) AS a(asset)
+        WHERE NOT EXISTS (
+            SELECT 1 FROM balances b WHERE b.user_id = u.id
+        )
+        ON CONFLICT (user_id, asset) DO NOTHING;
+    `, [DEFAULT_WALLET_ASSETS]);
 
 }
