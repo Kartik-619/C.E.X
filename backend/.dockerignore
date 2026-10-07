@@ -1,5 +1,35 @@
+# dependencies (re-installed inside the image)
 node_modules
+
+# VCS / tooling
 .git
+.gitignore
+.dockerignore
+Dockerfile
+
+# secrets & local env
 .env
-err.log
-out.log
+.env.*
+!.env.example
+
+# build artifacts & caches
+dist
+out
+coverage
+*.tsbuildinfo
+.eslintcache
+.cache
+
+# logs
+logs
+*.log
+run.err.log
+run.log
+
+# editor / OS noise
+.idea
+.vscode
+.DS_Store
+
+# docs
+README.md

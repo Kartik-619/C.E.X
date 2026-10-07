@@ -43,6 +43,7 @@ import { OTPService } from '../infra/auth/otp';
 import { JwtTokenVerifier } from '../infra/auth/jwt';
 
 const USE_DB = process.env.USE_DB === 'true';
+const PORT = Number(process.env.PORT) || 3010;
 
 // 1. Create Logger
 const logger = LoggerFactory.createLogger('console', LogLevel.INFO);
@@ -136,7 +137,8 @@ const requireAuth = authMiddleware.createHandler.bind(authMiddleware);
 
 // 15. Single server: HTTP API + WebSocket share one port/access point
 const server = serve({
-    port: 3010,
+    port: PORT,
+    hostname: '0.0.0.0',
     websocket: wsServer.handlers,
     async fetch(request: Request, server: UpgradableServer) {
         const url = new URL(request.url);
