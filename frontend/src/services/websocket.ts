@@ -2,29 +2,53 @@ import { getToken } from "./api";
 import type { WSMessage, WSEventType, WSOrderPlaced } from "../types/websocket";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3010/api";
+const FALLBACK_WS_URL = "ws://localhost:3010";
 
-// Single access point: the WS endpoint shares the HTTP API origin unless
-// NEXT_PUBLIC_WS_URL explicitly overrides it.
-function deriveWsUrl(): string {
+function isLocalhost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+// The HTTP API and the WebSocket server share one port/origin, so the WS
+// target is resolved at connect time:
+// 1. NEXT_PUBLIC_WS_URL when explicitly set.
+// 2. The origin of NEXT_PUBLIC_API_URL when it is an absolute URL.
+// 3. The page origin (same server) otherwise.
+// A localhost target from the build env is ignored when the page is served
+// from another host, so no ws://localhost URL ever reaches a deployed browser.
+function resolveWsUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_WS_URL;
+  if (envUrl) return envUrl;
+
+  const pageOrigin = typeof window !== "undefined" ? window.location.origin : null;
+  let apiOrigin: string | null = null;
   try {
-    const url = new URL(API_BASE_URL);
+    const url = new URL(API_BASE_URL, pageOrigin ?? undefined);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
     url.pathname = "/";
     url.search = "";
     url.hash = "";
-    return url.toString();
+    apiOrigin = url.toString();
   } catch {
-    return "ws://localhost:3010";
+    apiOrigin = null;
   }
+
+  if (apiOrigin && pageOrigin) {
+    const apiHost = new URL(apiOrigin).hostname;
+    const pageHost = new URL(pageOrigin).hostname;
+    if (!isLocalhost(apiHost) || isLocalhost(pageHost)) return apiOrigin;
+  } else if (apiOrigin) {
+    return apiOrigin;
+  }
+
+  return pageOrigin ? pageOrigin.replace(/^http/, "ws") : FALLBACK_WS_URL;
 }
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || deriveWsUrl();
-
 function buildWsUrl(): string {
+  const wsUrl = resolveWsUrl();
   const token = getToken();
-  if (!token) return WS_URL;
-  const separator = WS_URL.includes("?") ? "&" : "?";
-  return `${WS_URL}${separator}token=${encodeURIComponent(token)}`;
+  if (!token) return wsUrl;
+  const separator = wsUrl.includes("?") ? "&" : "?";
+  return `${wsUrl}${separator}token=${encodeURIComponent(token)}`;
 }
 
 let websocket: WebSocket | null = null;

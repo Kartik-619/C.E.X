@@ -74,13 +74,13 @@ SERVICE ARCHITECTURE:
 - `services/api.ts` is the ONLY layer components use for HTTP backend communication.
 - TradingAPI should handle API calls, request/response typing, consistent errors, and API configuration.
 - API base URL comes from `NEXT_PUBLIC_API_URL`.
-- WebSocket URL comes from `NEXT_PUBLIC_WS_URL`.
+- WebSocket URL comes from `NEXT_PUBLIC_WS_URL` when set, otherwise it is derived from the API origin / page origin (WS shares the HTTP server's port).
 - `services/websocket.ts` manages the WebSocket connection, reconnection, and connection errors.
 - Components should consume services through hooks rather than implementing networking themselves.
 
 ENVIRONMENT VARIABLES:
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
-NEXT_PUBLIC_WS_URL=ws://localhost:3001
+NEXT_PUBLIC_API_URL=http://localhost:3010/api
+# NEXT_PUBLIC_WS_URL is optional; it defaults to the API/page origin (same server)
 
 BACKEND ENDPOINTS:
 POST   /api/orders             → Place active order

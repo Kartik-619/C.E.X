@@ -6,7 +6,7 @@ The project is a **monorepo with two workspaces**:
 
 | Path        | What it is                                                        |
 | ----------- | ----------------------------------------------------------------- |
-| `backend/`  | Bun + TypeScript trading engine, REST API (`:3010`) and WebSocket server (`:3011`) |
+| `backend/`  | Bun + TypeScript trading engine with REST API + WebSocket on one port (`:3010`) |
 | `frontend/` | Next.js (App Router) trading dashboard that talks to the backend  |
 
 > Feature/roadmap/known-gaps tracking lives in [`analysis.md`](./analysis.md). Agent coding rules live in [`backend/agents.MD`](./backend/agents.MD) and [`frontend/AGENTS.md`](./frontend/AGENTS.md).
@@ -117,7 +117,7 @@ C.E.X/
 ```bash
 cd backend
 bun install          # install dependencies
-bun run index.ts     # start REST API on :3010 and WebSocket on :3011
+bun run index.ts     # start REST API + WebSocket on :3010 (single server)
 ```
 
 Startup will print the registered routes, e.g.:
@@ -134,7 +134,7 @@ Endpoints:
   ...
   GET    /api/orderbook               - Get order book
   GET    /api/health                  - Health check
-WebSocket running on ws://localhost:3011
+WebSocket attached to ws://localhost:3010 (same port as HTTP)
 ```
 
 With the default in-memory stores, no database is needed. Wallets are seeded for demo users `alice` (USD 1000) and `bob` (BTC 5).
@@ -147,7 +147,7 @@ npm install          # or: bun install
 npm run dev          # start Next.js on http://localhost:3000
 ```
 
-The defaults already target the local backend (`http://localhost:3010/api`, `ws://localhost:3011`), so no env file is required. If you run the services on other hosts, create `frontend/.env.local` with `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_WS_URL` (see below).
+The defaults already target the local backend (`http://localhost:3010/api`), so no env file is required — the WebSocket URL is derived from the API origin (or the page origin) and never hardcodes a separate WS port. If you run the services on other hosts, create `frontend/.env.local` with `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_WS_URL` (see below).
 
 Open **http://localhost:3000**, register an account (or log in as an OAuth user), then use **Dashboard** to place orders and **Wallet** to deposit funds.
 
@@ -182,7 +182,7 @@ Open **http://localhost:3000**, register an account (or log in as an OAuth user)
 | Variable                 | Default                   | Purpose                          |
 | ------------------------ | ------------------------- | -------------------------------- |
 | `NEXT_PUBLIC_API_URL`    | `http://localhost:3010/api` | REST base URL (no trailing `/`) |
-| `NEXT_PUBLIC_WS_URL`     | `ws://localhost:3011`      | WebSocket URL                    |
+| `NEXT_PUBLIC_WS_URL`     | *(derived)*                | WebSocket URL (`ws`/`wss` from API origin; only set to override) |
 
 ---
 
@@ -229,7 +229,7 @@ Base URL: `http://localhost:3010` (`http://localhost:3010/api` for the endpoints
 
 ## WebSocket Reference
 
-URL: `ws://localhost:3011`
+URL: same origin as the HTTP server — `ws://localhost:3010` locally, `wss://<your-host>` when deployed (the frontend derives it automatically).
 
 Messages are `{ type, data }`. The singleton frontend service auto-reconnects and dispatches each `type` to registered listeners.
 

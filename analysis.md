@@ -6,7 +6,7 @@
 
 - **Backend**: Bun + TypeScript, hand-rolled HTTP router (no Express), OOP / DI / SOLID, raw `pg` Pool (no ORM), `jsonwebtoken`, `bcryptjs`, EmailJS for OTP.
 - **Frontend**: Next.js 15 (App Router) + React + TailwindCSS v4 + react-toastify, zod client validation, Context API (no Redux).
-- **Communication**: REST (`:3010`) + WebSocket (`:3011`, singleton with auto-reconnect).
+- **Communication**: REST + WebSocket on one port (`:3010`, singleton with auto-reconnect).
 - **Tests**: `bun:test` (backend), Vitest + jsdom (frontend).
 
 ---
