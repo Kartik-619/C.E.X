@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge/Badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle/ThemeToggle";
@@ -38,12 +39,18 @@ export const Header: React.FC<HeaderProps> = ({ connected, onToggleSidebar, user
             </svg>
           </button>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900 text-sm font-bold text-white dark:bg-white dark:text-zinc-900">
-              CX
-            </span>
-            <span className="hidden text-lg font-semibold tracking-tight sm:block">
-              C.E.X Dashboard
-            </span>
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 rounded-md transition-opacity hover:opacity-80"
+              title="Go to home"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900 text-sm font-bold text-white dark:bg-white dark:text-zinc-900">
+                CX
+              </span>
+              <span className="hidden text-lg font-semibold tracking-tight sm:block">
+                C.E.X Dashboard
+              </span>
+            </Link>
           </div>
         </div>
 
