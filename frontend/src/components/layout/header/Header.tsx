@@ -3,6 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge/Badge";
+import { ThemeToggle } from "@/components/ui/theme-toggle/ThemeToggle";
 import { useAuth } from "@/context/UserContext";
 
 interface HeaderProps {
@@ -47,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({ connected, onToggleSidebar, user
         </div>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Badge variant="neutral" className="hidden px-2.5 py-1 text-xs sm:inline-flex">
             BTC/USD
           </Badge>

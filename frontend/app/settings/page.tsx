@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge/Badge";
 import { PageLoader } from "@/components/ui/page-loader/PageLoader";
 import { useWebSocketContext } from "@/context/WebSocketContext";
 import { useAuth } from "@/context/UserContext";
+import { useTheme } from "@/context/ThemeContext";
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
@@ -28,6 +29,7 @@ function Field({ label, value }: { label: string; value: string }) {
 export default function SettingsPage() {
   const { connected } = useWebSocketContext();
   const { user, loading, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
@@ -97,9 +99,15 @@ export default function SettingsPage() {
               </Card>
 
               <Card header={<h2 className="text-base font-semibold">Appearance</h2>}>
-                <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                  The interface follows your system theme automatically.
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                    Currently using the{" "}
+                    <span className="font-medium capitalize">{theme}</span> theme.
+                  </p>
+                  <Button variant="secondary" size="sm" onClick={toggleTheme}>
+                    {theme === "dark" ? "Switch to light" : "Switch to dark"}
+                  </Button>
+                </div>
               </Card>
 
               <Card
