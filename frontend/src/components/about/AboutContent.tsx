@@ -29,7 +29,7 @@ const TOPICS: Topic[] = [
   },
   {
     title: "Authentication & security",
-    body: "Passwords are hashed with bcrypt and sessions use short-lived JWTs (7 days). Email OTP verification is available on sensitive actions, and Google / GitHub OAuth is supported for sign-in.",
+    body: "Passwords are hashed with bcrypt and sessions use short-lived JWTs (7 days). Email OTP verification is available on sensitive actions to keep your account secure.",
   },
 ];
 
