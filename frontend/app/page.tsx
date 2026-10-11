@@ -50,10 +50,7 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,0,0,0.06),transparent_60%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.06),transparent_60%)]" />
         <div className="mx-auto max-w-6xl px-5 pb-24 pt-20 sm:px-8 sm:pt-28">
           <div className="mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Institutional-grade order matching engine
-            </span>
+         
             <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-6xl">
               Trade with
               <span className="block">precise execution.</span>
