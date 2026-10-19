@@ -8,7 +8,7 @@ import type { IWallet } from "./Iwallet";
 export interface IMatchEngine<T = Order> {
     processOrder(order: T): Promise<T>;
     cancelOrder(orderId: number): Promise<void>;
-    createOrder(order: T): Promise<T>;  // ✅ Add this
+    createOrder(order: T): Promise<T>;  
 }
 
 export abstract class AbstractEngine<T = Order, W = Balance> implements IMatchEngine<T> {
@@ -16,5 +16,5 @@ export abstract class AbstractEngine<T = Order, W = Balance> implements IMatchEn
 
     abstract processOrder(order: T): Promise<T>;
     abstract cancelOrder(orderId: number): Promise<void>;
-    abstract createOrder(order: T): Promise<T>;  // ✅ Add this
+    abstract createOrder(order: T): Promise<T>;  
 }
